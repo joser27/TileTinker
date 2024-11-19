@@ -188,7 +188,7 @@ export default function Home() {
 
             {!saveAllFrames && (
               <div className="text-sm text-gray-600">
-                Use the "Animation Frames" input below to specify which frames to save
+                Use the &quot;Animation Frames&quot; input below to specify which frames to save
               </div>
             )}
 
