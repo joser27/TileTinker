@@ -40,6 +40,9 @@ export default function Home() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    canvas.style.imageRendering = antialiasing ? "auto" : "pixelated";
+    ctx.imageSmoothingEnabled = antialiasing;
+
     const image = new Image();
     image.src = imageSrc;
 
@@ -79,7 +82,7 @@ export default function Home() {
     };
 
     return () => clearInterval(animationInterval);
-  }, [imageSrc, columns, rows, animationFrames, animationSpeed]);
+  }, [imageSrc, columns, rows, animationFrames, animationSpeed, antialiasing]);
   
 
   return (
@@ -123,7 +126,7 @@ export default function Home() {
 
         {/* Scale Control */}
         <div>
-          <label>Scale Preview (1x, 2x, etc.):</label>
+          <label>Scale Preview (0.5x, 2x, etc.):</label>
           <input
             type="number"
             value={scale}
@@ -217,15 +220,15 @@ export default function Home() {
               {/* Tile Numbers */}
               {Array.from({ length: rows }).map((_, rowIndex) =>
                 Array.from({ length: columns }).map((_, colIndex) => {
-                  const tileIndex = rowIndex * columns + colIndex; // Calculate tile index
+                  const tileIndex = rowIndex * columns + colIndex;
                   return (
                     <div
                       key={`tile-${tileIndex}`}
                       className="absolute text-xs font-bold text-red-600 bg-white bg-opacity-75 rounded px-1"
                       style={{
-                        top: `${(rowIndex + 0.5) / rows * 100}%`, // Center vertically
+                        top: `${rowIndex / rows * 100}%`, // Align to top of tile
                         left: `${(colIndex + 0.5) / columns * 100}%`, // Center horizontally
-                        transform: "translate(-50%, -50%)", // Fully center the number
+                        transform: "translate(-50%, 2px)", // Center horizontally and offset slightly from top
                       }}
                     >
                       {tileIndex}
