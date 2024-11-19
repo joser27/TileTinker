@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 export default function Home() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -10,6 +12,8 @@ export default function Home() {
   const [animationFrames, setAnimationFrames] = useState<number[]>([]);
   const [animationSpeed, setAnimationSpeed] = useState<number>(5); // Frames per second
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [saveAllFrames, setSaveAllFrames] = useState<boolean>(true);
+  const [outputFilename, setOutputFilename] = useState<string>("sprite_sheet_frames");
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -31,6 +35,61 @@ export default function Home() {
 
   const handleAnimationSpeedChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setAnimationSpeed(Number(event.target.value));
+  };
+
+  const saveSpriteSheet = () => {
+    if (!imageSrc || !canvasRef.current) return;
+    
+    if (!saveAllFrames && animationFrames.length === 0) {
+      alert("Please enter frame numbers to save in the Animation Frames input");
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const zip = new JSZip();
+    const image = new Image();
+    image.src = imageSrc;
+
+    image.onload = () => {
+      const spriteWidth = image.width / columns;
+      const spriteHeight = image.height / rows;
+
+      const framesToProcess = saveAllFrames 
+        ? Array.from({ length: rows * columns }, (_, i) => i) // All frames
+        : animationFrames; // Only selected frames
+
+      framesToProcess.forEach((frameIndex) => {
+        const row = Math.floor(frameIndex / columns);
+        const col = frameIndex % columns;
+
+        canvas.width = spriteWidth;
+        canvas.height = spriteHeight;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(
+          image,
+          col * spriteWidth,
+          row * spriteHeight,
+          spriteWidth,
+          spriteHeight,
+          0,
+          0,
+          spriteWidth,
+          spriteHeight
+        );
+
+        const frameDataUrl = canvas.toDataURL("image/png");
+        zip.file(`frame_${frameIndex}.png`, frameDataUrl.split(",")[1], { base64: true });
+      });
+
+      zip.generateAsync({ type: "blob" }).then((blob) => {
+        const filename = outputFilename.trim() || "sprite_sheet_frames";
+        saveAs(blob, `${filename}.zip`);
+      });
+    };
   };
 
   useEffect(() => {
@@ -101,6 +160,46 @@ export default function Home() {
             className="p-2 border rounded"
           />
         </div>
+
+        {imageSrc && (
+          <>
+            <div className="flex items-center space-x-2">
+              <label>Save Mode:</label>
+              <select 
+                value={saveAllFrames ? "all" : "selected"}
+                onChange={(e) => setSaveAllFrames(e.target.value === "all")}
+                className="p-2 border rounded text-black"
+              >
+                <option value="all">All Frames</option>
+                <option value="selected">Selected Frames Only</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-2">Output Filename:</label>
+              <input
+                type="text"
+                value={outputFilename}
+                onChange={(e) => setOutputFilename(e.target.value)}
+                placeholder="sprite_sheet_frames"
+                className="p-2 border rounded w-full text-black"
+              />
+            </div>
+
+            {!saveAllFrames && (
+              <div className="text-sm text-gray-600">
+                Use the "Animation Frames" input below to specify which frames to save
+              </div>
+            )}
+
+            <button
+              onClick={saveSpriteSheet}
+              className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Save {saveAllFrames ? "All" : "Selected"} Frames as ZIP
+            </button>
+          </>
+        )}
 
         {/* Grid Settings */}
         <div className="flex space-x-4">
