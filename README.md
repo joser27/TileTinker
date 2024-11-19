@@ -37,13 +37,16 @@ TileTinker is a web-based tool for game developers and pixel artists to cut spri
    http://localhost:3000
    ```
 
+### **Live Demo**
+Visit the live site here: [TileTinker GitHub Pages](https://joser27.github.io/TileTinker/)
+
 ## **How to Use**
 1. **Upload Sprite Sheet**: Click the upload button and select a sprite sheet.
 2. **Set Rows and Columns**: Use the input fields to specify the grid layout.
 3. **Preview the Grid**:
    - The grid dynamically updates based on the rows and columns.
    - Each tile is labeled with its index, starting from `0`.
-4. **Download Slices**: Click "Save Cuts as Zip" to download all slices packaged in a ZIP file.
+4. **Download Slices**: Click "Save Frames as ZIP" to download all slices packaged in a ZIP file.
 
 ## **Technologies Used**
 - **Frontend**:
@@ -59,7 +62,6 @@ TileTinker is a web-based tool for game developers and pixel artists to cut spri
 ## **Future Improvements**
 - Support irregular grids and tile dimensions.
 - Enable drag-and-drop grid adjustments.
-- Add support for animations (e.g., extracting frames for sprite animations).
 - Provide advanced file formats for export (e.g., JSON metadata).
 
 ## **Contributing**
