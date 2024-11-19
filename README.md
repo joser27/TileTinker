@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+# **TileTinker: Sprite Sheet Cutter**
 
-First, run the development server:
+TileTinker is a web-based tool for game developers and pixel artists to cut sprite sheets into individual tiles. It allows users to upload a sprite sheet, define the number of rows and columns, preview the grid layout with numbered tiles, and download all the slices as a ZIP file.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## **Features**
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Upload Sprite Sheets**: Supports common image formats (e.g., PNG, JPEG).
+- **Customizable Grid**: Set the number of rows and columns to define the tile layout.
+- **Live Preview**: Displays a grid overlay on the sprite sheet, dynamically numbered for easy reference.
+- **Downloadable Slices**: Packages all slices into a single ZIP file for download.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## **Getting Started**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### **Prerequisites**
+- Node.js (version 16+)
+- npm (Node Package Manager)
 
-## Learn More
+### **Installation**
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/joser27/tiletinker.git
+   cd tiletinker
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. Open the site in your browser:
+   ```
+   http://localhost:3000
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## **How to Use**
+1. **Upload Sprite Sheet**: Click the upload button and select a sprite sheet.
+2. **Set Rows and Columns**: Use the input fields to specify the grid layout.
+3. **Preview the Grid**:
+   - The grid dynamically updates based on the rows and columns.
+   - Each tile is labeled with its index, starting from `0`.
+4. **Download Slices**: Click "Save Cuts as Zip" to download all slices packaged in a ZIP file.
 
-## Deploy on Vercel
+## **Technologies Used**
+- **Frontend**:
+  - [React](https://reactjs.org/) for building the UI.
+  - [Next.js](https://nextjs.org/) for server-side rendering and routing.
+  - [Tailwind CSS](https://tailwindcss.com/) for styling.
+- **Dependencies**:
+  - [JSZip](https://stuk.github.io/jszip/) for creating ZIP files.
+  - [FileSaver.js](https://github.com/eligrey/FileSaver.js/) for downloading files.
+- **Development Tools**:
+  - TypeScript for type safety.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## **Future Improvements**
+- Support irregular grids and tile dimensions.
+- Enable drag-and-drop grid adjustments.
+- Add support for animations (e.g., extracting frames for sprite animations).
+- Provide advanced file formats for export (e.g., JSON metadata).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## **Contributing**
+Contributions are welcome! If you’d like to improve TileTinker:
+1. Fork the repository.
+2. Create a new branch:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. Commit your changes:
+   ```bash
+   git commit -m "Add your feature"
+   ```
+4. Push to your branch:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+5. Submit a pull request.
