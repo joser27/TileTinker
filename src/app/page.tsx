@@ -14,6 +14,8 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [saveAllFrames, setSaveAllFrames] = useState<boolean>(true);
   const [outputFilename, setOutputFilename] = useState<string>("sprite_sheet_frames");
+  const [inputValue, setInputValue] = useState<string>('');
+  const debounceTimeout = useRef<NodeJS.Timeout>();
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -26,11 +28,42 @@ export default function Home() {
 
   const handleAnimationInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.target.value;
-    const frames = input
-      .split(",")
-      .map((n) => parseInt(n.trim(), 10))
-      .filter((n) => !isNaN(n));
-    setAnimationFrames(frames);
+    setInputValue(input); // Store the raw input value
+
+    // Clear any existing timeout
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    // Set a new timeout to process the input after 500ms of no typing
+    debounceTimeout.current = setTimeout(() => {
+      const frames: number[] = [];
+      
+      // Only process if there's input
+      if (input.trim()) {
+        // Split by comma and process each part
+        input.split(',').forEach(part => {
+          part = part.trim();
+          if (part.includes('-')) {
+            // Handle range (e.g., "4-8")
+            const [start, end] = part.split('-').map(n => parseInt(n.trim(), 10));
+            if (!isNaN(start) && !isNaN(end)) {
+              for (let i = start; i <= end; i++) {
+                frames.push(i);
+              }
+            }
+          } else {
+            // Handle single number
+            const num = parseInt(part, 10);
+            if (!isNaN(num)) {
+              frames.push(num);
+            }
+          }
+        });
+      }
+      
+      setAnimationFrames(frames);
+    }, 500);
   };
 
   const handleAnimationSpeedChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -250,8 +283,9 @@ export default function Home() {
           <label>Animation Frames (comma-separated):</label>
           <input
             type="text"
+            value={inputValue}
             onChange={handleAnimationInput}
-            placeholder="e.g., 4,5,6,7"
+            placeholder="e.g., 4-8 or 4,5,6,7,8"
             className="p-2 border rounded w-full text-black"
           />
         </div>
