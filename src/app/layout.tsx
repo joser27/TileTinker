@@ -12,8 +12,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">
-        {children}
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      </head>
+      <body className="min-h-screen bg-slate-900 text-white retro-pattern">
+        <div className="min-h-screen backdrop-blur-sm">
+          {children}
+        </div>
       </body>
     </html>
   );

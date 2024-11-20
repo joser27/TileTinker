@@ -16,6 +16,9 @@ export default function Home() {
   const [outputFilename, setOutputFilename] = useState<string>("sprite_sheet_frames");
   const [inputValue, setInputValue] = useState<string>('');
   const debounceTimeout = useRef<NodeJS.Timeout>();
+  const [showGrid, setShowGrid] = useState<boolean>(true);
+  const [showNumbers, setShowNumbers] = useState<boolean>(true);
+  const [saveFormat, setSaveFormat] = useState<'individual' | 'spritesheet'>('individual');
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -82,7 +85,6 @@ export default function Home() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const zip = new JSZip();
     const image = new Image();
     image.src = imageSrc;
 
@@ -91,37 +93,78 @@ export default function Home() {
       const spriteHeight = image.height / rows;
 
       const framesToProcess = saveAllFrames 
-        ? Array.from({ length: rows * columns }, (_, i) => i) // All frames
-        : animationFrames; // Only selected frames
+        ? Array.from({ length: rows * columns }, (_, i) => i)
+        : animationFrames;
 
-      framesToProcess.forEach((frameIndex) => {
-        const row = Math.floor(frameIndex / columns);
-        const col = frameIndex % columns;
+      if (saveFormat === 'spritesheet') {
+        // Create a new canvas for the combined sprite sheet
+        const newCanvas = document.createElement('canvas');
+        const newCtx = newCanvas.getContext('2d');
+        if (!newCtx) return;
 
-        canvas.width = spriteWidth;
-        canvas.height = spriteHeight;
+        // Set the canvas size based on the number of frames
+        newCanvas.width = spriteWidth * framesToProcess.length;
+        newCanvas.height = spriteHeight;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(
-          image,
-          col * spriteWidth,
-          row * spriteHeight,
-          spriteWidth,
-          spriteHeight,
-          0,
-          0,
-          spriteWidth,
-          spriteHeight
-        );
+        // Draw each frame horizontally
+        framesToProcess.forEach((frameIndex, i) => {
+          const row = Math.floor(frameIndex / columns);
+          const col = frameIndex % columns;
 
-        const frameDataUrl = canvas.toDataURL("image/png");
-        zip.file(`frame_${frameIndex}.png`, frameDataUrl.split(",")[1], { base64: true });
-      });
+          newCtx.drawImage(
+            image,
+            col * spriteWidth,
+            row * spriteHeight,
+            spriteWidth,
+            spriteHeight,
+            i * spriteWidth,
+            0,
+            spriteWidth,
+            spriteHeight
+          );
+        });
 
-      zip.generateAsync({ type: "blob" }).then((blob) => {
-        const filename = outputFilename.trim() || "sprite_sheet_frames";
-        saveAs(blob, `${filename}.zip`);
-      });
+        // Save the combined sprite sheet
+        newCanvas.toBlob((blob) => {
+          if (blob) {
+            const filename = outputFilename.trim() || "sprite_sheet";
+            saveAs(blob, `${filename}.png`);
+          }
+        }, 'image/png');
+
+      } else {
+        // Original individual frames logic
+        const zip = new JSZip();
+
+        framesToProcess.forEach((frameIndex) => {
+          const row = Math.floor(frameIndex / columns);
+          const col = frameIndex % columns;
+
+          canvas.width = spriteWidth;
+          canvas.height = spriteHeight;
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(
+            image,
+            col * spriteWidth,
+            row * spriteHeight,
+            spriteWidth,
+            spriteHeight,
+            0,
+            0,
+            spriteWidth,
+            spriteHeight
+          );
+
+          const frameDataUrl = canvas.toDataURL("image/png");
+          zip.file(`frame_${frameIndex}.png`, frameDataUrl.split(",")[1], { base64: true });
+        });
+
+        zip.generateAsync({ type: "blob" }).then((blob) => {
+          const filename = outputFilename.trim() || "sprite_sheet_frames";
+          saveAs(blob, `${filename}.zip`);
+        });
+      }
     };
   };
 
@@ -180,124 +223,163 @@ export default function Home() {
   return (
     <div className="flex flex-row items-start space-x-4 p-6">
       {/* Left Section: Inputs */}
-      <div className="flex flex-col items-start space-y-4 w-1/4">
+      <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
         <h1 className="text-4xl font-bold">Sprite Animation Viewer</h1>
 
         {/* Upload Input */}
-        <div>
+        <div className="w-full">
           <label className="block mb-2">Upload Sprite Sheet:</label>
           <input
             type="file"
             accept="image/*"
             onChange={handleImageUpload}
-            className="p-2 border rounded"
+            className="p-2 border rounded w-full"
           />
         </div>
 
         {imageSrc && (
           <>
-            <div className="flex items-center space-x-2">
-              <label>Save Mode:</label>
-              <select 
-                value={saveAllFrames ? "all" : "selected"}
-                onChange={(e) => setSaveAllFrames(e.target.value === "all")}
-                className="p-2 border rounded text-black"
-              >
-                <option value="all">All Frames</option>
-                <option value="selected">Selected Frames Only</option>
-              </select>
+            {/* Grid Settings */}
+            <div className="flex space-x-4">
+              <div>
+                <label>Columns:</label>
+                <input
+                  type="number"
+                  value={columns}
+                  onChange={(e) => setColumns(Number(e.target.value))}
+                  className="p-2 border rounded w-20 text-black"
+                />
+              </div>
+              <div>
+                <label>Rows:</label>
+                <input
+                  type="number"
+                  value={rows}
+                  onChange={(e) => setRows(Number(e.target.value))}
+                  className="p-2 border rounded w-20 text-black"
+                />
+              </div>
             </div>
 
+            {/* Scale Control */}
             <div>
-              <label className="block mb-2">Output Filename:</label>
+              <label>Scale Preview (0.5x, 2x, etc.):</label>
               <input
-                type="text"
-                value={outputFilename}
-                onChange={(e) => setOutputFilename(e.target.value)}
-                placeholder="sprite_sheet_frames"
-                className="p-2 border rounded w-full text-black"
+                type="number"
+                value={scale}
+                onChange={(e) => setScale(Number(e.target.value))}
+                className="p-2 border rounded w-20 text-black"
               />
             </div>
 
-            {!saveAllFrames && (
-              <div className="text-sm text-gray-600">
-                Use the &quot;Animation Frames&quot; input below to specify which frames to save
-              </div>
-            )}
+            {/* Display Controls */}
+            <div className="flex items-center space-x-2">
+              <label>Antialiasing:</label>
+              <input
+                type="checkbox"
+                checked={antialiasing}
+                onChange={(e) => setAntialiasing(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-600"
+              />
+            </div>
 
-            <button
-              onClick={saveSpriteSheet}
-              className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Save {saveAllFrames ? "All" : "Selected"} Frames as ZIP
-            </button>
+            <div className="flex items-center space-x-2">
+              <label>Show Grid:</label>
+              <input
+                type="checkbox"
+                checked={showGrid}
+                onChange={(e) => setShowGrid(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-600"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <label>Show Numbers:</label>
+              <input
+                type="checkbox"
+                checked={showNumbers}
+                onChange={(e) => setShowNumbers(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-600"
+              />
+            </div>
+
+            {/* Animation Settings */}
+            <div>
+              <label>Animation Frames (comma-separated):</label>
+              <input
+                type="text"
+                value={inputValue}
+                onChange={handleAnimationInput}
+                placeholder="e.g., 4-8 or 4,5,6,7,8"
+                className="p-2 border rounded w-full text-black"
+              />
+            </div>
+            <div>
+              <label>Animation Speed (FPS):</label>
+              <input
+                type="number"
+                value={animationSpeed}
+                onChange={handleAnimationSpeedChange}
+                className="p-2 border rounded w-20 text-black"
+              />
+            </div>
+
+            {/* Save Settings */}
+            <div className="w-full pt-4 border-t">
+              <div className="w-full">
+                <label className="block mb-2">Save Mode:</label>
+                <select 
+                  value={saveAllFrames ? "all" : "selected"}
+                  onChange={(e) => setSaveAllFrames(e.target.value === "all")}
+                  className="p-2 border rounded text-black w-full"
+                >
+                  <option value="all">All Frames</option>
+                  <option value="selected">Selected Frames Only</option>
+                </select>
+              </div>
+
+              {/* Only show format selection for selected frames */}
+              {!saveAllFrames && (
+                <div className="w-full mt-4">
+                  <label className="block mb-2">Save Format:</label>
+                  <select 
+                    value={saveFormat}
+                    onChange={(e) => setSaveFormat(e.target.value as 'individual' | 'spritesheet')}
+                    className="p-2 border rounded text-black w-full"
+                  >
+                    <option value="individual">Individual Frames (ZIP)</option>
+                    <option value="spritesheet">Combined Sprite Sheet</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="mt-4">
+                <label className="block mb-2">Output Filename:</label>
+                <input
+                  type="text"
+                  value={outputFilename}
+                  onChange={(e) => setOutputFilename(e.target.value)}
+                  placeholder="sprite_sheet_frames"
+                  className="p-2 border rounded w-full text-black"
+                />
+              </div>
+
+              {!saveAllFrames && (
+                <div className="text-sm text-gray-600 mt-2">
+                  Use the &quot;Animation Frames&quot; input above to specify which frames to save
+                </div>
+              )}
+
+              <button
+                onClick={saveSpriteSheet}
+                className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
+              >
+                Save {saveAllFrames ? "All" : "Selected"} Frames
+                {!saveAllFrames && ` as ${saveFormat === 'individual' ? 'ZIP' : 'Sprite Sheet'}`}
+              </button>
+            </div>
           </>
         )}
-
-        {/* Grid Settings */}
-        <div className="flex space-x-4">
-          <div>
-            <label>Columns:</label>
-            <input
-              type="number"
-              value={columns}
-              onChange={(e) => setColumns(Number(e.target.value))}
-              className="p-2 border rounded w-20 text-black"
-            />
-          </div>
-          <div>
-            <label>Rows:</label>
-            <input
-              type="number"
-              value={rows}
-              onChange={(e) => setRows(Number(e.target.value))}
-              className="p-2 border rounded w-20 text-black"
-            />
-          </div>
-        </div>
-
-        {/* Scale Control */}
-        <div>
-          <label>Scale Preview (0.5x, 2x, etc.):</label>
-          <input
-            type="number"
-            value={scale}
-            onChange={(e) => setScale(Number(e.target.value))}
-            className="p-2 border rounded w-20 text-black"
-          />
-        </div>
-
-        {/* Antialiasing Toggle */}
-        <div className="flex items-center space-x-2">
-          <label>Antialiasing:</label>
-          <input
-            type="checkbox"
-            checked={antialiasing}
-            onChange={(e) => setAntialiasing(e.target.checked)}
-            className="form-checkbox h-5 w-5 text-blue-600"
-          />
-        </div>
-
-        {/* Animation Settings */}
-        <div>
-          <label>Animation Frames (comma-separated):</label>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={handleAnimationInput}
-            placeholder="e.g., 4-8 or 4,5,6,7,8"
-            className="p-2 border rounded w-full text-black"
-          />
-        </div>
-        <div>
-          <label>Animation Speed (FPS):</label>
-          <input
-            type="number"
-            value={animationSpeed}
-            onChange={handleAnimationSpeedChange}
-            className="p-2 border rounded w-20 text-black"
-          />
-        </div>
       </div>
 
       {/* Middle Section: Image Grid Preview */}
@@ -327,7 +409,7 @@ export default function Home() {
               }}
             >
               {/* Horizontal Grid Lines */}
-              {Array.from({ length: rows - 1 }).map((_, rowIndex) => (
+              {showGrid && Array.from({ length: rows - 1 }).map((_, rowIndex) => (
                 <div
                   key={`row-${rowIndex}`}
                   className="absolute left-0 border-t border-dashed border-red-500"
@@ -339,7 +421,7 @@ export default function Home() {
               ))}
 
               {/* Vertical Grid Lines */}
-              {Array.from({ length: columns - 1 }).map((_, colIndex) => (
+              {showGrid && Array.from({ length: columns - 1 }).map((_, colIndex) => (
                 <div
                   key={`col-${colIndex}`}
                   className="absolute top-0 border-l border-dashed border-red-500"
@@ -351,7 +433,7 @@ export default function Home() {
               ))}
 
               {/* Tile Numbers */}
-              {Array.from({ length: rows }).map((_, rowIndex) =>
+              {showNumbers && Array.from({ length: rows }).map((_, rowIndex) =>
                 Array.from({ length: columns }).map((_, colIndex) => {
                   const tileIndex = rowIndex * columns + colIndex;
                   return (
@@ -359,9 +441,9 @@ export default function Home() {
                       key={`tile-${tileIndex}`}
                       className="absolute text-xs font-bold text-red-600 bg-white bg-opacity-75 rounded px-1"
                       style={{
-                        top: `${rowIndex / rows * 100}%`, // Align to top of tile
-                        left: `${(colIndex + 0.5) / columns * 100}%`, // Center horizontally
-                        transform: "translate(-50%, 2px)", // Center horizontally and offset slightly from top
+                        top: `${rowIndex / rows * 100}%`,
+                        left: `${(colIndex + 0.5) / columns * 100}%`,
+                        transform: "translate(-50%, 2px)",
                       }}
                     >
                       {tileIndex}

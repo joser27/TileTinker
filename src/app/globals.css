@@ -2,20 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Retro Gaming Theme */
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Press Start 2P', system-ui, -apple-system, sans-serif;
+}
+
+.retro-pattern {
+  background-image: 
+    linear-gradient(45deg, #1e293b 25%, transparent 25%),
+    linear-gradient(-45deg, #1e293b 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1e293b 75%),
+    linear-gradient(-45deg, transparent 75%, #1e293b 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* Custom Button Style */
+.btn-retro {
+  @apply px-4 py-2 border-4 border-white shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] 
+  hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] 
+  hover:translate-x-[2px] hover:translate-y-[2px] 
+  transition-all duration-100 bg-blue-600;
+}
+
+/* Custom Input Style */
+.input-retro {
+  @apply bg-slate-800 border-2 border-white px-3 py-2 
+  focus:outline-none focus:ring-2 focus:ring-white 
+  focus:border-transparent;
+}
+
+/* Custom Select Style */
+.select-retro {
+  @apply bg-slate-800 border-2 border-white px-3 py-2 
+  focus:outline-none focus:ring-2 focus:ring-white 
+  focus:border-transparent;
 }

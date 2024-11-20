@@ -1,14 +1,26 @@
-
 # **TileTinker: Sprite Sheet Cutter**
 
-TileTinker is a web-based tool for game developers and pixel artists to cut sprite sheets into individual tiles. It allows users to upload a sprite sheet, define the number of rows and columns, preview the grid layout with numbered tiles, and download all the slices as a ZIP file.
+TileTinker is a web-based tool for game developers and pixel artists to cut sprite sheets into individual tiles. It allows users to upload a sprite sheet, define the number of rows and columns, preview the grid layout with numbered tiles, and download frames individually or as a new sprite sheet.
+
+### **Live Demo**
+🎮 Try it now: [TileTinker Live Demo](https://joser27.github.io/TileTinker/)
 
 ## **Features**
 
 - **Upload Sprite Sheets**: Supports common image formats (e.g., PNG, JPEG).
 - **Customizable Grid**: Set the number of rows and columns to define the tile layout.
-- **Live Preview**: Displays a grid overlay on the sprite sheet, dynamically numbered for easy reference.
-- **Downloadable Slices**: Packages all slices into a single ZIP file for download.
+- **Interactive Preview**:
+  - Live grid overlay with toggleable grid lines
+  - Optional tile numbering for easy reference
+  - Adjustable preview scale
+  - Toggle antialiasing for pixel-perfect preview
+- **Flexible Export Options**:
+  - Save all frames as individual files (ZIP)
+  - Save selected frames as individual files (ZIP)
+  - Save selected frames as a new sprite sheet
+- **Animation Preview**:
+  - Test animations with adjustable frame rate
+  - Select specific frames using ranges or comma-separated values
 
 ## **Getting Started**
 
@@ -37,16 +49,20 @@ TileTinker is a web-based tool for game developers and pixel artists to cut spri
    http://localhost:3000
    ```
 
-### **Live Demo**
-Visit the live site here: [TileTinker GitHub Pages](https://joser27.github.io/TileTinker/)
-
 ## **How to Use**
 1. **Upload Sprite Sheet**: Click the upload button and select a sprite sheet.
-2. **Set Rows and Columns**: Use the input fields to specify the grid layout.
-3. **Preview the Grid**:
-   - The grid dynamically updates based on the rows and columns.
-   - Each tile is labeled with its index, starting from `0`.
-4. **Download Slices**: Click "Save Frames as ZIP" to download all slices packaged in a ZIP file.
+2. **Set Grid Layout**: 
+   - Specify the number of rows and columns
+   - Toggle grid lines and tile numbers for better visibility
+3. **Preview and Adjust**:
+   - Use the scale control to zoom in/out
+   - Toggle antialiasing for pixel art
+   - Test animations by entering frame sequences and adjusting speed
+4. **Export Options**:
+   - Choose between saving all frames or specific frames
+   - When saving specific frames, select either:
+     - Individual PNG files (zipped)
+     - Combined sprite sheet with selected frames
 
 ## **Technologies Used**
 - **Frontend**:
@@ -63,9 +79,11 @@ Visit the live site here: [TileTinker GitHub Pages](https://joser27.github.io/Ti
 - Support irregular grids and tile dimensions.
 - Enable drag-and-drop grid adjustments.
 - Provide advanced file formats for export (e.g., JSON metadata).
+- Add batch processing for multiple sprite sheets.
+- Implement undo/redo functionality.
 
 ## **Contributing**
-Contributions are welcome! If you’d like to improve TileTinker:
+Contributions are welcome! If you'd like to improve TileTinker:
 1. Fork the repository.
 2. Create a new branch:
    ```bash
