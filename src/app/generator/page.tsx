@@ -12,6 +12,8 @@ interface Sprite {
   name: string;
   width: number;
   height: number;
+  offsetX?: number;
+  offsetY?: number;
 }
 
 export default function SpritesheetGenerator() {
@@ -26,6 +28,15 @@ export default function SpritesheetGenerator() {
   const [antialiasing, setAntialiasing] = useState(false);
   const [padding, setPadding] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [animationCells, setAnimationCells] = useState<number[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [fps, setFps] = useState(12);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const animationFrameRef = useRef<number>();
+  const [frameSequenceInput, setFrameSequenceInput] = useState('');
+  const preloadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const [showAnimationPreview, setShowAnimationPreview] = useState(false);
+  const [currentPreviewFrame, setCurrentPreviewFrame] = useState<number>(0);
 
   // Calculate optimal cell size based on sprites
   const calculateOptimalCellSize = (sprites: Sprite[]) => {
@@ -197,46 +208,34 @@ export default function SpritesheetGenerator() {
     canvas.width = width;
     canvas.height = height;
 
-    // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    // Draw grid and cell numbers
-    if (showGrid) {
-      ctx.strokeStyle = '#ddd';
-      ctx.lineWidth = 1;
-    }
-    
-    if (showNumbers) {
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.font = '12px Arial';
+    if (!antialiasing) {
+      ctx.imageSmoothingEnabled = false;
     }
 
+    // Draw grid and sprites
     for (let row = 0; row < gridSize.rows; row++) {
       for (let col = 0; col < gridSize.cols; col++) {
         const x = col * cellSize;
         const y = row * cellSize;
-        const cellId = row * gridSize.cols + col;
+        const cellIndex = row * gridSize.cols + col;
 
-        // Draw cell border
+        // Draw cell border if grid is enabled
         if (showGrid) {
+          ctx.strokeStyle = '#ddd';
           ctx.strokeRect(x, y, cellSize, cellSize);
         }
 
-        // Draw cell number
+        // Draw cell number if enabled
         if (showNumbers) {
           ctx.fillStyle = '#666';
-          ctx.fillText(cellId.toString(), x + 4, y + 4);
-        }
-
-        // Highlight selected cell
-        if (cellId === selectedCell) {
-          ctx.fillStyle = 'rgba(37, 99, 235, 0.1)';
-          ctx.fillRect(x, y, cellSize, cellSize);
+          ctx.font = '12px Arial';
+          ctx.fillText(cellIndex.toString(), x + 4, y + 14);
         }
 
         // Draw sprite if present
-        const cell = cells[cellId];
+        const cell = cells[cellIndex];
         if (cell?.spriteId) {
           const sprite = sprites.find(s => s.id === cell.spriteId);
           if (sprite) {
@@ -254,17 +253,19 @@ export default function SpritesheetGenerator() {
               const width = sprite.width * scale;
               const height = sprite.height * scale;
               
-              // Center sprite in cell (with padding)
-              const spriteX = x + (cellSize - width) / 2;
-              const spriteY = y + (cellSize - height) / 2;
-              
-              if (!antialiasing) {
-                ctx.imageSmoothingEnabled = false;
-              }
+              // Center sprite in cell (with padding) and apply offset
+              const spriteX = x + (cellSize - width) / 2 + (sprite.offsetX || 0);
+              const spriteY = y + (cellSize - height) / 2 + (sprite.offsetY || 0);
               
               ctx.drawImage(img, spriteX, spriteY, width, height);
             };
           }
+        }
+
+        // Highlight selected cell
+        if (cellIndex === selectedCell) {
+          ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+          ctx.fillRect(x, y, cellSize, cellSize);
         }
       }
     }
@@ -320,6 +321,116 @@ export default function SpritesheetGenerator() {
       setSelectedCell(null);
     }
   };
+
+  // Update preloaded images when sprites change
+  useEffect(() => {
+    // Clear old preloaded images
+    preloadedImagesRef.current.clear();
+
+    // Preload each sprite image
+    sprites.forEach(sprite => {
+      const img = new Image();
+      img.src = sprite.src;
+      img.onload = () => {
+        preloadedImagesRef.current.set(sprite.id, img);
+      };
+    });
+  }, [sprites]); // Now this will update when sprites (including offsets) change
+
+  // Animation preview effect
+  useEffect(() => {
+    const canvas = previewCanvasRef.current;
+    if (!canvas || !isPlaying || animationCells.length === 0) return;
+
+    // Set canvas size to match cell size
+    canvas.width = cellSize;
+    canvas.height = cellSize;
+
+    let frameIndex = 0;
+    let lastFrameTime = 0;
+    const frameInterval = 1000 / fps;
+    const ctx = canvas.getContext('2d')!;
+
+    if (!antialiasing) {
+      ctx.imageSmoothingEnabled = false;
+    }
+
+    const animate = (timestamp: number) => {
+      if (timestamp - lastFrameTime >= frameInterval) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const cellIndex = animationCells[frameIndex];
+        const cell = cells[cellIndex];
+        
+        if (cell?.spriteId) {
+          const sprite = sprites.find(s => s.id === cell.spriteId);
+          if (sprite && preloadedImagesRef.current.has(sprite.id)) {
+            const img = preloadedImagesRef.current.get(sprite.id)!;
+            
+            // Calculate scale to fit sprite within cell (accounting for padding)
+            const availableWidth = cellSize - (padding * 2);
+            const availableHeight = cellSize - (padding * 2);
+            const scale = Math.min(
+              availableWidth / sprite.width,
+              availableHeight / sprite.height
+            );
+            
+            const width = sprite.width * scale;
+            const height = sprite.height * scale;
+            
+            // Center sprite in canvas with padding and offset
+            const x = (cellSize - width) / 2 + (sprite.offsetX || 0);
+            const y = (cellSize - height) / 2 + (sprite.offsetY || 0);
+            
+            ctx.drawImage(img, x, y, width, height);
+          }
+        }
+
+        frameIndex = (frameIndex + 1) % animationCells.length;
+        setCurrentPreviewFrame(animationCells[frameIndex]);
+        lastFrameTime = timestamp;
+      }
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, animationCells, fps, cells, sprites, antialiasing, cellSize, padding]);
+
+  // Helper function to parse cell sequence input
+  const parseCellSequence = (input: string): number[] => {
+    return input
+      .split(',')
+      .flatMap(part => {
+        part = part.trim();
+        if (part.includes('-')) {
+          const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+          if (!isNaN(start) && !isNaN(end)) {
+            // Create array of numbers from start to end (inclusive)
+            return Array.from(
+              { length: end - start + 1 }, 
+              (_, i) => start + i
+            );
+          }
+        }
+        const num = parseInt(part);
+        return !isNaN(num) ? [num] : [];
+      })
+      .filter(n => n >= 0 && n < cells.length);
+  };
+
+  // Stop animation when hiding preview
+  useEffect(() => {
+    if (!showAnimationPreview) {
+      setIsPlaying(false);
+    }
+  }, [showAnimationPreview]);
 
   return (
     <div className="container mx-auto p-6">
@@ -452,6 +563,99 @@ export default function SpritesheetGenerator() {
             </div>
           </div>
 
+          {/* Animation Preview Toggle */}
+          <div className="bg-slate-800 p-6 rounded-lg">
+            <button
+              onClick={() => setShowAnimationPreview(!showAnimationPreview)}
+              className="flex items-center gap-2 w-full text-left"
+            >
+              <div className="flex-1 font-medium">Animation Preview</div>
+              <svg
+                className={`w-5 h-5 transition-transform ${
+                  showAnimationPreview ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {/* Animation Preview Content */}
+            {showAnimationPreview && (
+              <div className="space-y-4 mt-4 pt-4 border-t border-slate-700">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium mb-1">Frame Sequence:</label>
+                  <input
+                    type="text"
+                    value={frameSequenceInput}
+                    onChange={(e) => {
+                      const inputValue = e.target.value;
+                      setFrameSequenceInput(inputValue);
+                      const cells = parseCellSequence(inputValue);
+                      setAnimationCells(cells);
+                    }}
+                    placeholder="Enter cells (e.g., 0-3 or 0,1,2,3)"
+                    className="w-full p-2 border rounded text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium mb-1">FPS:</label>
+                  <input
+                    type="number"
+                    value={fps}
+                    onChange={(e) => setFps(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full p-2 border rounded text-black"
+                    min="1"
+                    max="60"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className={`flex-1 px-4 py-2 rounded transition-colors ${
+                      animationCells.length === 0 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : isPlaying 
+                          ? 'bg-red-500 hover:bg-red-600' 
+                          : 'bg-green-500 hover:bg-green-600'
+                    }`}
+                    disabled={animationCells.length === 0}
+                  >
+                    {isPlaying ? 'Stop' : 'Play'}
+                  </button>
+                </div>
+
+                <div className="border border-slate-600 rounded bg-slate-700 p-2">
+                  <div className="relative">
+                    <canvas
+                      ref={previewCanvasRef}
+                      width={cellSize}
+                      height={cellSize}
+                      className="w-full aspect-square bg-slate-900"
+                      style={{ 
+                        imageRendering: antialiasing ? 'auto' : 'pixelated',
+                      }}
+                    />
+                    {isPlaying && (
+                      <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                        Cell {currentPreviewFrame}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Selected Cell Details */}
           {selectedCell !== null && (
             <div className="space-y-2 bg-slate-800 p-6 rounded-lg">
@@ -484,6 +688,50 @@ export default function SpritesheetGenerator() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Offset Controls */}
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium">Offset Adjustments</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-sm text-gray-400">X Offset:</label>
+                          <input
+                            type="number"
+                            value={getSelectedSprite()?.offsetX || 0}
+                            onChange={(e) => {
+                              const sprite = getSelectedSprite();
+                              if (sprite) {
+                                setSprites(prev => prev.map(s => 
+                                  s.id === sprite.id 
+                                    ? { ...s, offsetX: parseInt(e.target.value) || 0 }
+                                    : s
+                                ));
+                              }
+                            }}
+                            className="w-full p-2 border rounded text-black"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-400">Y Offset:</label>
+                          <input
+                            type="number"
+                            value={getSelectedSprite()?.offsetY || 0}
+                            onChange={(e) => {
+                              const sprite = getSelectedSprite();
+                              if (sprite) {
+                                setSprites(prev => prev.map(s => 
+                                  s.id === sprite.id 
+                                    ? { ...s, offsetY: parseInt(e.target.value) || 0 }
+                                    : s
+                                ));
+                              }
+                            }}
+                            className="w-full p-2 border rounded text-black"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
