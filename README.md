@@ -1,100 +1,79 @@
-# **TileTinker: Sprite Sheet Cutter**
+# **TileTinker: Sprite Sheet Tools**
 
-TileTinker is a web-based tool for game developers and pixel artists to cut sprite sheets into individual tiles. It allows users to upload a sprite sheet, define the number of rows and columns, preview the grid layout with numbered tiles, and download frames individually or as a new sprite sheet.
+TileTinker is a web-based toolkit for game developers and pixel artists to work with sprite sheets. It offers both sprite sheet creation and automatic sprite detection features, allowing users to either build sprite sheets from scratch or extract sprites from existing sheets.
 
 ### **Live Demo**
 🎮 Try it now: [TileTinker Live Demo](https://joser27.github.io/TileTinker/)
 
 ## **Features**
 
-- **Upload Sprite Sheets**: Supports common image formats (e.g., PNG, JPEG).
-- **Customizable Grid**: Set the number of rows and columns to define the tile layout.
+### **Sprite Sheet Generator** (`/generator`)
+- **Create Sprite Sheets**: Build sprite sheets from individual sprites
+- **Customizable Grid**: Set the number of rows and columns to define the layout
 - **Interactive Preview**:
   - Live grid overlay with toggleable grid lines
   - Optional tile numbering for easy reference
   - Adjustable preview scale
   - Toggle antialiasing for pixel-perfect preview
+  - Individual sprite offset adjustments
+- **Animation Preview**:
+  - Test animations with adjustable frame rate
+  - Select specific frames using ranges (e.g., "0-3") or comma-separated values
+  - Real-time frame counter
+  - Toggle animation preview panel
+- **Sprite Management**:
+  - View sprite details and position
+  - Adjust individual sprite offsets
+  - Delete individual sprites
 - **Flexible Export Options**:
   - Save all frames as individual files (ZIP)
   - Save selected frames as individual files (ZIP)
   - Save selected frames as a new sprite sheet
-- **Animation Preview**:
-  - Test animations with adjustable frame rate
-  - Select specific frames using ranges or comma-separated values
+- **Display Options**:
+  - Toggle grid lines
+  - Toggle cell numbers
+  - Toggle antialiasing
+  - Adjust sprite padding
 
-## **Getting Started**
-
-### **Prerequisites**
-- Node.js (version 16+)
-- npm (Node Package Manager)
-
-### **Installation**
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/joser27/tiletinker.git
-   cd tiletinker
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open the site in your browser:
-   ```
-   http://localhost:3000
-   ```
+### **Auto Frame Detection** (`/auto`)
+- **Automatic Sprite Detection**: Upload a sprite sheet and automatically detect individual sprites
+- **Interactive Preview**: View detected frames with numbered overlays
+- **Frame Selection**: Select specific frames for preview or export
+- **Animation Testing**: Test animations using frame sequences
+- **Offset Adjustment**: Fine-tune sprite positions with X/Y offsets
+- **Export Options**: Save as individual frames or new sprite sheet
 
 ## **How to Use**
-1. **Upload Sprite Sheet**: Click the upload button and select a sprite sheet.
-2. **Set Grid Layout**: 
-   - Specify the number of rows and columns
-   - Toggle grid lines and tile numbers for better visibility
-3. **Preview and Adjust**:
-   - Use the scale control to zoom in/out
-   - Toggle antialiasing for pixel art
-   - Test animations by entering frame sequences and adjusting speed
-4. **Export Options**:
-   - Choose between saving all frames or specific frames
-   - When saving specific frames, select either:
-     - Individual PNG files (zipped)
-     - Combined sprite sheet with selected frames
+
+### **Sprite Sheet Generator**
+1. Navigate to `/generator`
+2. Upload individual sprites
+3. Set grid layout (rows and columns)
+4. Arrange sprites by clicking cells
+5. Adjust display options and sprite positions
+6. Preview animations if needed
+7. Export as individual files or sprite sheet
+
+### **Auto Frame Detection**
+1. Navigate to `/auto`
+2. Upload a sprite sheet
+3. Review detected frames
+4. Adjust frame offsets if needed
+5. Test animations using frame sequences
+6. Export selected frames or entire sheet
 
 ## **Technologies Used**
 - **Frontend**:
-  - [React](https://reactjs.org/) for building the UI.
-  - [Next.js](https://nextjs.org/) for server-side rendering and routing.
-  - [Tailwind CSS](https://tailwindcss.com/) for styling.
+  - [React](https://reactjs.org/) for building the UI
+  - [Next.js](https://nextjs.org/) for server-side rendering and routing
+  - [Tailwind CSS](https://tailwindcss.com/) for styling
 - **Dependencies**:
-  - [JSZip](https://stuk.github.io/jszip/) for creating ZIP files.
-  - [FileSaver.js](https://github.com/eligrey/FileSaver.js/) for downloading files.
+  - [JSZip](https://stuk.github.io/jszip/) for creating ZIP files
+  - [FileSaver.js](https://github.com/eligrey/FileSaver.js/) for downloading files
 - **Development Tools**:
-  - TypeScript for type safety.
+  - TypeScript for type safety
 
 ## **Future Improvements**
-- Support irregular grids and tile dimensions.
-- Enable drag-and-drop grid adjustments.
-- Provide advanced file formats for export (e.g., JSON metadata).
-- Add batch processing for multiple sprite sheets.
-- Implement undo/redo functionality.
-
-## **Contributing**
-Contributions are welcome! If you'd like to improve TileTinker:
-1. Fork the repository.
-2. Create a new branch:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. Commit your changes:
-   ```bash
-   git commit -m "Add your feature"
-   ```
-4. Push to your branch:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-5. Submit a pull request.
+- Support irregular grids and tile dimensions
+- Provide advanced file formats for export (e.g., JSON metadata)
+- Implement undo/redo functionality
