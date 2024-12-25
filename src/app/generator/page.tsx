@@ -573,19 +573,15 @@ export default function SpritesheetGenerator() {
               <h3 className="font-medium">Display Options</h3>
               <div className="flex flex-col gap-2">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Preview Scale:</label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="4"
-                      step="0.5"
-                      value={previewScale}
-                      onChange={(e) => setPreviewScale(Number(e.target.value))}
-                      className="flex-1"
-                    />
-                    <span className="text-sm w-12">{previewScale}x</span>
-                  </div>
+                  <label className="block text-sm font-medium mb-1">Preview Scale (0.5x, 2x, etc.):</label>
+                  <input
+                    type="number"
+                    value={previewScale}
+                    onChange={(e) => setPreviewScale(Number(e.target.value))}
+                    step="0.1"
+                    min="0.1"
+                    className="p-2 border rounded text-black w-20"
+                  />
                 </div>
                 <label className="flex items-center gap-2">
                   <input
