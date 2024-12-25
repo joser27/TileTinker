@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import Navbar from './components/Navbar'
 
 export default function Home() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -221,246 +222,249 @@ export default function Home() {
   
 
   return (
-    <div className="flex flex-row items-start space-x-4 p-6">
-      {/* Left Section: Inputs */}
-      <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
-        <h1 className="text-4xl font-bold">Sprite Animation Viewer</h1>
+    <>
+      <Navbar />
+      <div className="flex flex-row items-start space-x-4 p-6">
+        {/* Left Section: Inputs */}
+        <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
+          <h1 className="text-4xl font-bold">Sprite Animation Viewer</h1>
 
-        {/* Upload Input */}
-        <div className="w-full">
-          <label className="block mb-2">Upload Sprite Sheet:</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="p-2 border rounded w-full"
-          />
-        </div>
+          {/* Upload Input */}
+          <div className="w-full">
+            <label className="block mb-2">Upload Sprite Sheet:</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="p-2 border rounded w-full"
+            />
+          </div>
 
-        {imageSrc && (
-          <>
-            {/* Grid Settings */}
-            <div className="flex space-x-4">
-              <div>
-                <label>Columns:</label>
-                <input
-                  type="number"
-                  value={columns}
-                  onChange={(e) => setColumns(Number(e.target.value))}
-                  className="p-2 border rounded w-20 text-black"
-                />
-              </div>
-              <div>
-                <label>Rows:</label>
-                <input
-                  type="number"
-                  value={rows}
-                  onChange={(e) => setRows(Number(e.target.value))}
-                  className="p-2 border rounded w-20 text-black"
-                />
-              </div>
-            </div>
-
-            {/* Scale Control */}
-            <div>
-              <label>Scale Preview (0.5x, 2x, etc.):</label>
-              <input
-                type="number"
-                value={scale}
-                onChange={(e) => setScale(Number(e.target.value))}
-                className="p-2 border rounded w-20 text-black"
-              />
-            </div>
-
-            {/* Display Controls */}
-            <div className="flex items-center space-x-2">
-              <label>Antialiasing:</label>
-              <input
-                type="checkbox"
-                checked={antialiasing}
-                onChange={(e) => setAntialiasing(e.target.checked)}
-                className="form-checkbox h-5 w-5 text-blue-600"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <label>Show Grid:</label>
-              <input
-                type="checkbox"
-                checked={showGrid}
-                onChange={(e) => setShowGrid(e.target.checked)}
-                className="form-checkbox h-5 w-5 text-blue-600"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <label>Show Numbers:</label>
-              <input
-                type="checkbox"
-                checked={showNumbers}
-                onChange={(e) => setShowNumbers(e.target.checked)}
-                className="form-checkbox h-5 w-5 text-blue-600"
-              />
-            </div>
-
-            {/* Animation Settings */}
-            <div>
-              <label>Animation Frames (comma-separated):</label>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={handleAnimationInput}
-                placeholder="e.g., 4-8 or 4,5,6,7,8"
-                className="p-2 border rounded w-full text-black"
-              />
-            </div>
-            <div>
-              <label>Animation Speed (FPS):</label>
-              <input
-                type="number"
-                value={animationSpeed}
-                onChange={handleAnimationSpeedChange}
-                className="p-2 border rounded w-20 text-black"
-              />
-            </div>
-
-            {/* Save Settings */}
-            <div className="w-full pt-4 border-t">
-              <div className="w-full">
-                <label className="block mb-2">Save Mode:</label>
-                <select 
-                  value={saveAllFrames ? "all" : "selected"}
-                  onChange={(e) => setSaveAllFrames(e.target.value === "all")}
-                  className="p-2 border rounded text-black w-full"
-                >
-                  <option value="all">All Frames</option>
-                  <option value="selected">Selected Frames Only</option>
-                </select>
-              </div>
-
-              {/* Only show format selection for selected frames */}
-              {!saveAllFrames && (
-                <div className="w-full mt-4">
-                  <label className="block mb-2">Save Format:</label>
-                  <select 
-                    value={saveFormat}
-                    onChange={(e) => setSaveFormat(e.target.value as 'individual' | 'spritesheet')}
-                    className="p-2 border rounded text-black w-full"
-                  >
-                    <option value="individual">Individual Frames (ZIP)</option>
-                    <option value="spritesheet">Combined Sprite Sheet</option>
-                  </select>
+          {imageSrc && (
+            <>
+              {/* Grid Settings */}
+              <div className="flex space-x-4">
+                <div>
+                  <label>Columns:</label>
+                  <input
+                    type="number"
+                    value={columns}
+                    onChange={(e) => setColumns(Number(e.target.value))}
+                    className="p-2 border rounded w-20 text-black"
+                  />
                 </div>
-              )}
+                <div>
+                  <label>Rows:</label>
+                  <input
+                    type="number"
+                    value={rows}
+                    onChange={(e) => setRows(Number(e.target.value))}
+                    className="p-2 border rounded w-20 text-black"
+                  />
+                </div>
+              </div>
 
-              <div className="mt-4">
-                <label className="block mb-2">Output Filename:</label>
+              {/* Scale Control */}
+              <div>
+                <label>Scale Preview (0.5x, 2x, etc.):</label>
+                <input
+                  type="number"
+                  value={scale}
+                  onChange={(e) => setScale(Number(e.target.value))}
+                  className="p-2 border rounded w-20 text-black"
+                />
+              </div>
+
+              {/* Display Controls */}
+              <div className="flex items-center space-x-2">
+                <label>Antialiasing:</label>
+                <input
+                  type="checkbox"
+                  checked={antialiasing}
+                  onChange={(e) => setAntialiasing(e.target.checked)}
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <label>Show Grid:</label>
+                <input
+                  type="checkbox"
+                  checked={showGrid}
+                  onChange={(e) => setShowGrid(e.target.checked)}
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <label>Show Numbers:</label>
+                <input
+                  type="checkbox"
+                  checked={showNumbers}
+                  onChange={(e) => setShowNumbers(e.target.checked)}
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
+              </div>
+
+              {/* Animation Settings */}
+              <div>
+                <label>Animation Frames (comma-separated):</label>
                 <input
                   type="text"
-                  value={outputFilename}
-                  onChange={(e) => setOutputFilename(e.target.value)}
-                  placeholder="sprite_sheet_frames"
+                  value={inputValue}
+                  onChange={handleAnimationInput}
+                  placeholder="e.g., 4-8 or 4,5,6,7,8"
                   className="p-2 border rounded w-full text-black"
                 />
               </div>
+              <div>
+                <label>Animation Speed (FPS):</label>
+                <input
+                  type="number"
+                  value={animationSpeed}
+                  onChange={handleAnimationSpeedChange}
+                  className="p-2 border rounded w-20 text-black"
+                />
+              </div>
 
-              {!saveAllFrames && (
-                <div className="text-sm text-gray-600 mt-2">
-                  Use the &quot;Animation Frames&quot; input above to specify which frames to save
+              {/* Save Settings */}
+              <div className="w-full pt-4 border-t">
+                <div className="w-full">
+                  <label className="block mb-2">Save Mode:</label>
+                  <select 
+                    value={saveAllFrames ? "all" : "selected"}
+                    onChange={(e) => setSaveAllFrames(e.target.value === "all")}
+                    className="p-2 border rounded text-black w-full"
+                  >
+                    <option value="all">All Frames</option>
+                    <option value="selected">Selected Frames Only</option>
+                  </select>
                 </div>
-              )}
 
-              <button
-                onClick={saveSpriteSheet}
-                className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
-              >
-                Save {saveAllFrames ? "All" : "Selected"} Frames
-                {!saveAllFrames && ` as ${saveFormat === 'individual' ? 'ZIP' : 'Sprite Sheet'}`}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Middle Section: Image Grid Preview */}
-      {imageSrc && (
-        <div
-          className="relative w-1/2 bg-gray-200 overflow-hidden"
-          style={{
-            transform: `scale(${scale})`, // Apply scaling
-            transformOrigin: "top left", // Ensure scaling starts from top-left corner
-          }}
-        >
-          <div className="relative w-full">
-            <img
-              src={imageSrc}
-              alt="Uploaded Sprite Sheet"
-              className="w-full h-auto block"
-              style={{
-                display: "block",
-                imageRendering: antialiasing ? "auto" : "pixelated", // Toggle antialiasing
-              }}
-            />
-            <div
-              className="absolute top-0 left-0 pointer-events-none"
-              style={{
-                width: "100%",
-                height: "100%",
-              }}
-            >
-              {/* Horizontal Grid Lines */}
-              {showGrid && Array.from({ length: rows - 1 }).map((_, rowIndex) => (
-                <div
-                  key={`row-${rowIndex}`}
-                  className="absolute left-0 border-t border-dashed border-red-500"
-                  style={{
-                    width: "100%",
-                    top: `${((rowIndex + 1) / rows) * 100}%`,
-                  }}
-                />
-              ))}
-
-              {/* Vertical Grid Lines */}
-              {showGrid && Array.from({ length: columns - 1 }).map((_, colIndex) => (
-                <div
-                  key={`col-${colIndex}`}
-                  className="absolute top-0 border-l border-dashed border-red-500"
-                  style={{
-                    height: "100%",
-                    left: `${((colIndex + 1) / columns) * 100}%`,
-                  }}
-                />
-              ))}
-
-              {/* Tile Numbers */}
-              {showNumbers && Array.from({ length: rows }).map((_, rowIndex) =>
-                Array.from({ length: columns }).map((_, colIndex) => {
-                  const tileIndex = rowIndex * columns + colIndex;
-                  return (
-                    <div
-                      key={`tile-${tileIndex}`}
-                      className="absolute text-xs font-bold text-red-600 bg-white bg-opacity-75 rounded px-1"
-                      style={{
-                        top: `${rowIndex / rows * 100}%`,
-                        left: `${(colIndex + 0.5) / columns * 100}%`,
-                        transform: "translate(-50%, 2px)",
-                      }}
+                {/* Only show format selection for selected frames */}
+                {!saveAllFrames && (
+                  <div className="w-full mt-4">
+                    <label className="block mb-2">Save Format:</label>
+                    <select 
+                      value={saveFormat}
+                      onChange={(e) => setSaveFormat(e.target.value as 'individual' | 'spritesheet')}
+                      className="p-2 border rounded text-black w-full"
                     >
-                      {tileIndex}
-                    </div>
-                  );
-                })
-              )}
+                      <option value="individual">Individual Frames (ZIP)</option>
+                      <option value="spritesheet">Combined Sprite Sheet</option>
+                    </select>
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <label className="block mb-2">Output Filename:</label>
+                  <input
+                    type="text"
+                    value={outputFilename}
+                    onChange={(e) => setOutputFilename(e.target.value)}
+                    placeholder="sprite_sheet_frames"
+                    className="p-2 border rounded w-full text-black"
+                  />
+                </div>
+
+                {!saveAllFrames && (
+                  <div className="text-sm text-gray-600 mt-2">
+                    Use the &quot;Animation Frames&quot; input above to specify which frames to save
+                  </div>
+                )}
+
+                <button
+                  onClick={saveSpriteSheet}
+                  className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
+                >
+                  Save {saveAllFrames ? "All" : "Selected"} Frames
+                  {!saveAllFrames && ` as ${saveFormat === 'individual' ? 'ZIP' : 'Sprite Sheet'}`}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Middle Section: Image Grid Preview */}
+        {imageSrc && (
+          <div
+            className="relative w-1/2 bg-gray-200 overflow-hidden"
+            style={{
+              transform: `scale(${scale})`, // Apply scaling
+              transformOrigin: "top left", // Ensure scaling starts from top-left corner
+            }}
+          >
+            <div className="relative w-full">
+              <img
+                src={imageSrc}
+                alt="Uploaded Sprite Sheet"
+                className="w-full h-auto block"
+                style={{
+                  display: "block",
+                  imageRendering: antialiasing ? "auto" : "pixelated", // Toggle antialiasing
+                }}
+              />
+              <div
+                className="absolute top-0 left-0 pointer-events-none"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                }}
+              >
+                {/* Horizontal Grid Lines */}
+                {showGrid && Array.from({ length: rows - 1 }).map((_, rowIndex) => (
+                  <div
+                    key={`row-${rowIndex}`}
+                    className="absolute left-0 border-t border-dashed border-red-500"
+                    style={{
+                      width: "100%",
+                      top: `${((rowIndex + 1) / rows) * 100}%`,
+                    }}
+                  />
+                ))}
+
+                {/* Vertical Grid Lines */}
+                {showGrid && Array.from({ length: columns - 1 }).map((_, colIndex) => (
+                  <div
+                    key={`col-${colIndex}`}
+                    className="absolute top-0 border-l border-dashed border-red-500"
+                    style={{
+                      height: "100%",
+                      left: `${((colIndex + 1) / columns) * 100}%`,
+                    }}
+                  />
+                ))}
+
+                {/* Tile Numbers */}
+                {showNumbers && Array.from({ length: rows }).map((_, rowIndex) =>
+                  Array.from({ length: columns }).map((_, colIndex) => {
+                    const tileIndex = rowIndex * columns + colIndex;
+                    return (
+                      <div
+                        key={`tile-${tileIndex}`}
+                        className="absolute text-xs font-bold text-red-600 bg-white bg-opacity-75 rounded px-1"
+                        style={{
+                          top: `${rowIndex / rows * 100}%`,
+                          left: `${(colIndex + 0.5) / columns * 100}%`,
+                          transform: "translate(-50%, 2px)",
+                        }}
+                      >
+                        {tileIndex}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Right Section: Animation Preview */}
-      <div className="w-1/4">
-        <h2 className="text-2xl font-bold mb-4">Animation Preview</h2>
-        <canvas ref={canvasRef} className="border w-full" />
+        {/* Right Section: Animation Preview */}
+        <div className="w-1/4">
+          <h2 className="text-2xl font-bold mb-4">Animation Preview</h2>
+          <canvas ref={canvasRef} className="border w-full" />
+        </div>
       </div>
-    </div>
+    </>
   );
 }

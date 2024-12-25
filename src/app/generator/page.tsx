@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import Navbar from '../components/Navbar'
 
 interface Cell {
   id: number;
@@ -35,7 +36,6 @@ export default function SpritesheetGenerator() {
   const animationFrameRef = useRef<number>();
   const [frameSequenceInput, setFrameSequenceInput] = useState('');
   const preloadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
-  const [showAnimationPreview, setShowAnimationPreview] = useState(false);
   const [currentPreviewFrame, setCurrentPreviewFrame] = useState<number>(0);
 
   // Calculate optimal cell size based on sprites
@@ -425,21 +425,15 @@ export default function SpritesheetGenerator() {
       .filter(n => n >= 0 && n < cells.length);
   };
 
-  // Stop animation when hiding preview
-  useEffect(() => {
-    if (!showAnimationPreview) {
-      setIsPlaying(false);
-    }
-  }, [showAnimationPreview]);
-
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex gap-12">
-        {/* Left Panel */}
-        <div className="w-96 space-y-6 relative z-10">
+    <>
+      <Navbar />
+      <div className="flex flex-row items-start space-x-4 p-6">
+        {/* Left Panel: Controls */}
+        <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
           <h1 className="text-2xl font-bold">Sprite Sheet Generator</h1>
           
-          <div className="space-y-4 bg-slate-800 p-6 rounded-lg">
+          <div className="space-y-4 bg-slate-800 p-6 rounded-lg w-full">
             <div>
               <label className="block text-sm font-medium mb-1">Add Sprites:</label>
               <input
@@ -493,7 +487,6 @@ export default function SpritesheetGenerator() {
                   onChange={(e) => {
                     const newPadding = parseInt(e.target.value);
                     setPadding(newPadding);
-                    // Recalculate cell size with new padding
                     const optimalSize = calculateOptimalCellSize(sprites);
                     setCellSize(optimalSize);
                   }}
@@ -506,7 +499,7 @@ export default function SpritesheetGenerator() {
             {/* Output Filename */}
             <div className="space-y-2">
               <label className="block text-sm font-medium mb-1">Output Filename:</label>
-              <div className="space-y-2 relative z-10">
+              <div className="space-y-2">
                 <input
                   type="text"
                   value={outputFilename}
@@ -561,104 +554,56 @@ export default function SpritesheetGenerator() {
                 </label>
               </div>
             </div>
-          </div>
 
-          {/* Animation Preview Toggle */}
-          <div className="bg-slate-800 p-6 rounded-lg">
-            <button
-              onClick={() => setShowAnimationPreview(!showAnimationPreview)}
-              className="flex items-center gap-2 w-full text-left"
-            >
-              <div className="flex-1 font-medium">Animation Preview</div>
-              <svg
-                className={`w-5 h-5 transition-transform ${
-                  showAnimationPreview ? 'rotate-180' : ''
+            {/* Move animation controls here but keep the preview canvas in the right panel */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium mb-1">Frame Sequence:</label>
+              <input
+                type="text"
+                value={frameSequenceInput}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  setFrameSequenceInput(inputValue);
+                  const cells = parseCellSequence(inputValue);
+                  setAnimationCells(cells);
+                }}
+                placeholder="Enter cells (e.g., 0-3 or 0,1,2,3)"
+                className="w-full p-2 border rounded text-black"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium mb-1">FPS:</label>
+              <input
+                type="number"
+                value={fps}
+                onChange={(e) => setFps(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-full p-2 border rounded text-black"
+                min="1"
+                max="60"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsPlaying(!isPlaying)}
+                className={`flex-1 px-4 py-2 rounded transition-colors ${
+                  animationCells.length === 0 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : isPlaying 
+                      ? 'bg-red-500 hover:bg-red-600' 
+                      : 'bg-green-500 hover:bg-green-600'
                 }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                disabled={animationCells.length === 0}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-
-            {/* Animation Preview Content */}
-            {showAnimationPreview && (
-              <div className="space-y-4 mt-4 pt-4 border-t border-slate-700">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium mb-1">Frame Sequence:</label>
-                  <input
-                    type="text"
-                    value={frameSequenceInput}
-                    onChange={(e) => {
-                      const inputValue = e.target.value;
-                      setFrameSequenceInput(inputValue);
-                      const cells = parseCellSequence(inputValue);
-                      setAnimationCells(cells);
-                    }}
-                    placeholder="Enter cells (e.g., 0-3 or 0,1,2,3)"
-                    className="w-full p-2 border rounded text-black"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium mb-1">FPS:</label>
-                  <input
-                    type="number"
-                    value={fps}
-                    onChange={(e) => setFps(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full p-2 border rounded text-black"
-                    min="1"
-                    max="60"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className={`flex-1 px-4 py-2 rounded transition-colors ${
-                      animationCells.length === 0 
-                        ? 'bg-gray-400 cursor-not-allowed' 
-                        : isPlaying 
-                          ? 'bg-red-500 hover:bg-red-600' 
-                          : 'bg-green-500 hover:bg-green-600'
-                    }`}
-                    disabled={animationCells.length === 0}
-                  >
-                    {isPlaying ? 'Stop' : 'Play'}
-                  </button>
-                </div>
-
-                <div className="border border-slate-600 rounded bg-slate-700 p-2">
-                  <div className="relative">
-                    <canvas
-                      ref={previewCanvasRef}
-                      width={cellSize}
-                      height={cellSize}
-                      className="w-full aspect-square bg-slate-900"
-                      style={{ 
-                        imageRendering: antialiasing ? 'auto' : 'pixelated',
-                      }}
-                    />
-                    {isPlaying && (
-                      <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
-                        Cell {currentPreviewFrame}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+                {isPlaying ? 'Stop' : 'Play'}
+              </button>
+            </div>
           </div>
 
           {/* Selected Cell Details */}
           {selectedCell !== null && (
-            <div className="space-y-2 bg-slate-800 p-6 rounded-lg">
+            <div className="space-y-2 bg-slate-800 p-6 rounded-lg w-full">
               <h2 className="font-semibold">Selected Cell Details</h2>
               <div className="space-y-4">
                 <div>
@@ -752,65 +697,38 @@ export default function SpritesheetGenerator() {
               </div>
             </div>
           )}
+        </div>
 
-          {/* Sprite List */}
-          <div className="space-y-2 bg-slate-800 p-6 rounded-lg">
-            <h2 className="font-semibold">Sprites ({sprites.length})</h2>
-            <div className="max-h-96 overflow-y-auto space-y-2">
-              {sprites.map(sprite => {
-                const cellIndex = cells.findIndex(cell => cell.spriteId === sprite.id);
+        {/* Middle Section: Canvas */}
+        <div className="w-1/2">
+          <canvas
+            ref={canvasRef}
+            onClick={handleCanvasClick}
+            className="border border-gray-700"
+          />
+        </div>
 
-                return (
-                  <div
-                    key={sprite.id}
-                    className="flex flex-col p-2 border border-slate-600 rounded bg-slate-700"
-                  >
-                    <div className="flex items-center w-full">
-                      <img
-                        src={sprite.src}
-                        alt={sprite.name}
-                        className="w-8 h-8 object-contain flex-shrink-0"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                      <div className="ml-2 min-w-0 flex-1">
-                        <div className="text-sm break-all">{sprite.name}</div>
-                        <div className="text-xs text-gray-400">
-                          {sprite.width}x{sprite.height}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-600">
-                      {cellIndex !== -1 && (
-                        <div className="text-sm text-gray-400">
-                          Cell {cellIndex}
-                        </div>
-                      )}
-                      <button
-                        onClick={() => handleDeleteSprite(sprite.id)}
-                        className="px-2 py-1 bg-red-500 hover:bg-red-600 rounded text-sm transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+        {/* Right Section: Animation Preview */}
+        <div className="w-1/4">
+          <div className="bg-slate-800 p-6 rounded-lg">
+            <h2 className="text-xl font-bold mb-4">Animation Preview</h2>
+            <div className="relative">
+              <canvas
+                ref={previewCanvasRef}
+                className="w-full aspect-square bg-slate-900"
+                style={{ 
+                  imageRendering: antialiasing ? 'auto' : 'pixelated',
+                }}
+              />
+              {isPlaying && (
+                <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                  Cell {currentPreviewFrame}
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Right Panel */}
-        <div className="flex-1 flex justify-center items-start relative z-0">
-          <div className="inline-block border border-gray-300 rounded bg-gray-100">
-            <canvas
-              ref={canvasRef}
-              className="bg-white"
-              style={{ imageRendering: 'pixelated', cursor: 'pointer' }}
-              onClick={handleCanvasClick}
-            />
-          </div>
-        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import Navbar from '../components/Navbar'
 
 interface Frame {
   x: number;
@@ -27,6 +28,9 @@ export default function AutoDetect() {
   const [outputFilename, setOutputFilename] = useState<string>("auto_detected_frames");
   const [saveFormat, setSaveFormat] = useState<'individual' | 'spritesheet'>('individual');
   const debounceTimeout = useRef<NodeJS.Timeout>();
+  const [removeBackground, setRemoveBackground] = useState<boolean>(false);
+  const [backgroundColor, setBackgroundColor] = useState<string | null>(null);
+  const [processedImageSrc, setProcessedImageSrc] = useState<string | null>(null);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -41,11 +45,25 @@ export default function AutoDetect() {
     }
   };
 
-  const isEmptyRow = (imageData: ImageData, y: number): boolean => {
+  const isPixelBackground = (imageData: ImageData, x: number, y: number, bgColor: number[]): boolean => {
+    const index = (y * imageData.width + x) * 4;
+    return (
+      Math.abs(imageData.data[index] - bgColor[0]) <= 5 &&
+      Math.abs(imageData.data[index + 1] - bgColor[1]) <= 5 &&
+      Math.abs(imageData.data[index + 2] - bgColor[2]) <= 5
+    );
+  };
+
+  const isEmptyRow = (imageData: ImageData, y: number, bgColor?: number[]): boolean => {
     for (let x = 0; x < imageData.width; x++) {
       const index = (y * imageData.width + x) * 4;
       const alpha = imageData.data[index + 3];
-      if (alpha > 0) return false;
+      
+      if (removeBackground && bgColor) {
+        if (!isPixelBackground(imageData, x, y, bgColor)) return false;
+      } else {
+        if (alpha > 0) return false;
+      }
     }
     return true;
   };
@@ -56,7 +74,7 @@ export default function AutoDetect() {
 
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (!ctx) return;
 
       canvas.width = img.width;
@@ -66,13 +84,40 @@ export default function AutoDetect() {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const frames: Frame[] = [];
 
+      // Get background color from top-left pixel
+      const bgColor = removeBackground ? [
+        imageData.data[0],
+        imageData.data[1],
+        imageData.data[2]
+      ] : undefined;
+
+      // Store the background color for later use
+      setBackgroundColor(bgColor ? `rgb(${bgColor[0]}, ${bgColor[1]}, ${bgColor[2]})` : null);
+
+      // Process the entire image if background removal is enabled
+      if (removeBackground && bgColor) {
+        for (let i = 0; i < imageData.data.length; i += 4) {
+          if (
+            Math.abs(imageData.data[i] - bgColor[0]) <= 5 &&
+            Math.abs(imageData.data[i + 1] - bgColor[1]) <= 5 &&
+            Math.abs(imageData.data[i + 2] - bgColor[2]) <= 5
+          ) {
+            imageData.data[i + 3] = 0; // Set alpha to 0
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+        setProcessedImageSrc(canvas.toDataURL());
+      } else {
+        setProcessedImageSrc(imgSrc);
+      }
+
       // Logic to detect rows and columns with content
       const rowRanges: { start: number; end: number }[] = [];
       let startY = 0;
       let inSprite = false;
 
       for (let y = 0; y < img.height; y++) {
-        const isEmpty = isEmptyRow(imageData, y);
+        const isEmpty = isEmptyRow(imageData, y, bgColor);
 
         if (!isEmpty && !inSprite) {
           startY = y;
@@ -176,17 +221,17 @@ export default function AutoDetect() {
   };
 
   useEffect(() => {
-    if (!imageSrc || animationFrames.length === 0 || !canvasRef.current) return;
+    if (!processedImageSrc || animationFrames.length === 0 || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     canvas.style.imageRendering = antialiasing ? "auto" : "pixelated";
     ctx.imageSmoothingEnabled = antialiasing;
 
     const image = new Image();
-    image.src = imageSrc;
+    image.src = processedImageSrc;
 
     let frameIndex = 0;
     let animationInterval: number;
@@ -195,7 +240,16 @@ export default function AutoDetect() {
       const frame = detectedFrames[animationFrames[frameIndex]];
       if (!frame) return;
 
+      // Calculate scale to maintain original size
+      const scale = 1;  // Adjust this value if you want to change the size
+      canvas.width = frame.width * scale;
+      canvas.height = frame.height * scale;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Apply scale if needed
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      
       ctx.drawImage(
         image,
         frame.x,
@@ -207,6 +261,9 @@ export default function AutoDetect() {
         frame.width,
         frame.height
       );
+
+      // Reset transform
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
 
       setCurrentPreviewFrame(animationFrames[frameIndex]);
       frameIndex = (frameIndex + 1) % animationFrames.length;
@@ -224,10 +281,10 @@ export default function AutoDetect() {
     };
 
     return () => clearInterval(animationInterval);
-  }, [imageSrc, detectedFrames, animationFrames, animationSpeed, antialiasing]);
+  }, [processedImageSrc, detectedFrames, animationFrames, animationSpeed, antialiasing]);
 
   const saveSpriteSheet = () => {
-    if (!imageSrc || !canvasRef.current || detectedFrames.length === 0) return;
+    if (!processedImageSrc || !canvasRef.current || detectedFrames.length === 0) return;
     
     if (!saveAllFrames && animationFrames.length === 0) {
       alert("Please enter frame numbers to save in the Animation Frames input");
@@ -239,7 +296,7 @@ export default function AutoDetect() {
     if (!ctx) return;
 
     const image = new Image();
-    image.src = imageSrc;
+    image.src = processedImageSrc;
 
     image.onload = () => {
       const framesToProcess = saveAllFrames 
@@ -322,211 +379,239 @@ export default function AutoDetect() {
     };
   };
 
+  useEffect(() => {
+    if (imageSrc) {
+      detectFrames(imageSrc);
+    }
+  }, [removeBackground]);
+
   return (
-    <div className="flex flex-row items-start space-x-4 p-6">
-      {/* Left Section: Inputs */}
-      <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
-        <h1 className="text-4xl font-bold">Auto Frame Detection</h1>
+    <>
+      <Navbar />
+      <div className="flex flex-row items-start space-x-4 p-6">
+        {/* Left Section: Inputs */}
+        <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
+          <h1 className="text-4xl font-bold">Auto Frame Detection</h1>
 
-        <div className="w-full">
-          <label className="block mb-2">Upload Sprite Sheet:</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="p-2 border rounded w-full"
-          />
-        </div>
+          <div className="w-full">
+            <label className="block mb-2">Upload Sprite Sheet:</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="p-2 border rounded w-full"
+            />
+          </div>
 
-        {imageSrc && (
-          <>
-            <div>
-              <label className="block mb-2">Enter Frames to Preview:</label>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={handleAnimationInput}
-                placeholder="e.g., 0-3,5,7"
-                className="p-2 border rounded w-full text-black"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-2">Animation Speed (FPS):</label>
-              <input
-                type="number"
-                value={animationSpeed}
-                onChange={(e) => setAnimationSpeed(Number(e.target.value))}
-                className="p-2 border rounded w-20 text-black"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <label>Antialiasing:</label>
-              <input
-                type="checkbox"
-                checked={antialiasing}
-                onChange={(e) => setAntialiasing(e.target.checked)}
-                className="form-checkbox h-5 w-5 text-blue-600"
-              />
-            </div>
-
-            {selectedFrame !== null && (
-              <div className="w-full p-4 border rounded">
-                <h3 className="text-xl font-bold mb-2">Adjust Frame {selectedFrame}</h3>
-                <div className="flex items-center gap-4">
-                  <div>
-                    <label className="mr-2">X offset:</label>
-                    <input
-                      type="number"
-                      value={detectedFrames[selectedFrame].offsetX}
-                      onChange={(e) => {
-                        const newFrames = [...detectedFrames];
-                        newFrames[selectedFrame] = {
-                          ...newFrames[selectedFrame],
-                          offsetX: parseInt(e.target.value) || 0
-                        };
-                        setDetectedFrames(newFrames);
-                      }}
-                      className="p-1 border rounded w-20 text-black"
-                    />
-                  </div>
-                  <div>
-                    <label className="mr-2">Y offset:</label>
-                    <input
-                      type="number"
-                      value={detectedFrames[selectedFrame].offsetY}
-                      onChange={(e) => {
-                        const newFrames = [...detectedFrames];
-                        newFrames[selectedFrame] = {
-                          ...newFrames[selectedFrame],
-                          offsetY: parseInt(e.target.value) || 0
-                        };
-                        setDetectedFrames(newFrames);
-                      }}
-                      className="p-1 border rounded w-20 text-black"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="w-full pt-4 border-t">
-              <div className="w-full">
-                <label className="block mb-2">Save Mode:</label>
-                <select 
-                  value={saveAllFrames ? "all" : "selected"}
-                  onChange={(e) => setSaveAllFrames(e.target.value === "all")}
-                  className="p-2 border rounded text-black w-full"
-                >
-                  <option value="all">All Frames</option>
-                  <option value="selected">Selected Frames Only</option>
-                </select>
-              </div>
-
-              {/* Only show format selection for selected frames */}
-              {!saveAllFrames && (
-                <div className="w-full mt-4">
-                  <label className="block mb-2">Save Format:</label>
-                  <select 
-                    value={saveFormat}
-                    onChange={(e) => setSaveFormat(e.target.value as 'individual' | 'spritesheet')}
-                    className="p-2 border rounded text-black w-full"
-                  >
-                    <option value="individual">Individual Frames (ZIP)</option>
-                    <option value="spritesheet">Combined Sprite Sheet</option>
-                  </select>
-                </div>
-              )}
-
-              <div className="mt-4">
-                <label className="block mb-2">Output Filename:</label>
+          {imageSrc && (
+            <>
+              <div>
+                <label className="block mb-2">Enter Frames to Preview:</label>
                 <input
                   type="text"
-                  value={outputFilename}
-                  onChange={(e) => setOutputFilename(e.target.value)}
-                  placeholder="auto_detected_frames"
+                  value={inputValue}
+                  onChange={handleAnimationInput}
+                  placeholder="e.g., 0-3,5,7"
                   className="p-2 border rounded w-full text-black"
                 />
               </div>
 
-              {!saveAllFrames && (
-                <div className="text-sm text-gray-600 mt-2">
-                  Use the &quot;Animation Frames&quot; input above to specify which frames to save
+              <div>
+                <label className="block mb-2">Animation Speed (FPS):</label>
+                <input
+                  type="number"
+                  value={animationSpeed}
+                  onChange={(e) => setAnimationSpeed(Number(e.target.value))}
+                  className="p-2 border rounded w-20 text-black"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <label>Antialiasing:</label>
+                <input
+                  type="checkbox"
+                  checked={antialiasing}
+                  onChange={(e) => setAntialiasing(e.target.checked)}
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <label>Remove Background:</label>
+                <input
+                  type="checkbox"
+                  checked={removeBackground}
+                  onChange={(e) => setRemoveBackground(e.target.checked)}
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
+              </div>
+              {backgroundColor && removeBackground && (
+                <div className="text-sm">
+                  Detected background color: 
+                  <div 
+                    className="inline-block w-4 h-4 ml-2 border"
+                    style={{ backgroundColor: backgroundColor }}
+                  />
                 </div>
               )}
 
-              <button
-                onClick={saveSpriteSheet}
-                className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
-              >
-                Save {saveAllFrames ? "All" : "Selected"} Frames
-                {!saveAllFrames && ` as ${saveFormat === 'individual' ? 'ZIP' : 'Sprite Sheet'}`}
-              </button>
+              {selectedFrame !== null && (
+                <div className="w-full p-4 border rounded">
+                  <h3 className="text-xl font-bold mb-2">Adjust Frame {selectedFrame}</h3>
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <label className="mr-2">X offset:</label>
+                      <input
+                        type="number"
+                        value={detectedFrames[selectedFrame].offsetX}
+                        onChange={(e) => {
+                          const newFrames = [...detectedFrames];
+                          newFrames[selectedFrame] = {
+                            ...newFrames[selectedFrame],
+                            offsetX: parseInt(e.target.value) || 0
+                          };
+                          setDetectedFrames(newFrames);
+                        }}
+                        className="p-1 border rounded w-20 text-black"
+                      />
+                    </div>
+                    <div>
+                      <label className="mr-2">Y offset:</label>
+                      <input
+                        type="number"
+                        value={detectedFrames[selectedFrame].offsetY}
+                        onChange={(e) => {
+                          const newFrames = [...detectedFrames];
+                          newFrames[selectedFrame] = {
+                            ...newFrames[selectedFrame],
+                            offsetY: parseInt(e.target.value) || 0
+                          };
+                          setDetectedFrames(newFrames);
+                        }}
+                        className="p-1 border rounded w-20 text-black"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="w-full pt-4 border-t">
+                <div className="w-full">
+                  <label className="block mb-2">Save Mode:</label>
+                  <select 
+                    value={saveAllFrames ? "all" : "selected"}
+                    onChange={(e) => setSaveAllFrames(e.target.value === "all")}
+                    className="p-2 border rounded text-black w-full"
+                  >
+                    <option value="all">All Frames</option>
+                    <option value="selected">Selected Frames Only</option>
+                  </select>
+                </div>
+
+                {/* Only show format selection for selected frames */}
+                {!saveAllFrames && (
+                  <div className="w-full mt-4">
+                    <label className="block mb-2">Save Format:</label>
+                    <select 
+                      value={saveFormat}
+                      onChange={(e) => setSaveFormat(e.target.value as 'individual' | 'spritesheet')}
+                      className="p-2 border rounded text-black w-full"
+                    >
+                      <option value="individual">Individual Frames (ZIP)</option>
+                      <option value="spritesheet">Combined Sprite Sheet</option>
+                    </select>
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <label className="block mb-2">Output Filename:</label>
+                  <input
+                    type="text"
+                    value={outputFilename}
+                    onChange={(e) => setOutputFilename(e.target.value)}
+                    placeholder="auto_detected_frames"
+                    className="p-2 border rounded w-full text-black"
+                  />
+                </div>
+
+                {!saveAllFrames && (
+                  <div className="text-sm text-gray-600 mt-2">
+                    Use the &quot;Animation Frames&quot; input above to specify which frames to save
+                  </div>
+                )}
+
+                <button
+                  onClick={saveSpriteSheet}
+                  className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
+                >
+                  Save {saveAllFrames ? "All" : "Selected"} Frames
+                  {!saveAllFrames && ` as ${saveFormat === 'individual' ? 'ZIP' : 'Sprite Sheet'}`}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Middle Section: Sprite Sheet Preview */}
+        {processedImageSrc && (
+          <div className="w-1/2">
+            <div className="relative">
+              <img
+                src={processedImageSrc}
+                alt="Uploaded Sprite Sheet"
+                className="w-full h-auto"
+                ref={imageRef}
+              />
+              <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                {detectedFrames.map((frame, index) => {
+                  const imageElement = imageRef.current;
+                  if (!imageElement) return null;
+
+                  const scaleX = imageElement.clientWidth / imageElement.naturalWidth;
+                  const scaleY = imageElement.clientHeight / imageElement.naturalHeight;
+
+                  return (
+                    <div
+                      key={index}
+                      className={`absolute border border-dashed cursor-pointer pointer-events-auto
+                        ${selectedFrame === index ? 'border-blue-500 border-2' : 'border-red-500'}`}
+                      style={{
+                        left: `${frame.x * scaleX}px`,
+                        top: `${frame.y * scaleY}px`,
+                        width: `${frame.width * scaleX}px`,
+                        height: `${frame.height * scaleY}px`,
+                      }}
+                      onClick={() => setSelectedFrame(index)}
+                    >
+                      <span
+                        className="absolute top-0 left-1/2 -translate-x-1/2 bg-white bg-opacity-75 px-1 text-xs text-red-600 font-bold"
+                        style={{
+                          transform: "translateY(-100%)",
+                        }}
+                      >
+                        {index}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </>
+          </div>
+        )}
+
+        {/* Right Section: Animation Preview */}
+        {imageSrc && (
+          <div className="w-1/4">
+            <h2 className="text-2xl font-bold mb-4">Animation Preview</h2>
+            <div className="relative">
+              <canvas ref={canvasRef} className="border w-full" />
+              <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                Frame: {currentPreviewFrame}
+              </div>
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Middle Section: Sprite Sheet Preview */}
-      {imageSrc && (
-        <div className="w-1/2">
-          <div className="relative">
-            <img
-              src={imageSrc}
-              alt="Uploaded Sprite Sheet"
-              className="w-full h-auto"
-              ref={imageRef}
-            />
-            <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-              {detectedFrames.map((frame, index) => {
-                const imageElement = imageRef.current;
-                if (!imageElement) return null;
-
-                const scaleX = imageElement.clientWidth / imageElement.naturalWidth;
-                const scaleY = imageElement.clientHeight / imageElement.naturalHeight;
-
-                return (
-                  <div
-                    key={index}
-                    className={`absolute border border-dashed cursor-pointer pointer-events-auto
-                      ${selectedFrame === index ? 'border-blue-500 border-2' : 'border-red-500'}`}
-                    style={{
-                      left: `${frame.x * scaleX}px`,
-                      top: `${frame.y * scaleY}px`,
-                      width: `${frame.width * scaleX}px`,
-                      height: `${frame.height * scaleY}px`,
-                    }}
-                    onClick={() => setSelectedFrame(index)}
-                  >
-                    <span
-                      className="absolute top-0 left-1/2 -translate-x-1/2 bg-white bg-opacity-75 px-1 text-xs text-red-600 font-bold"
-                      style={{
-                        transform: "translateY(-100%)",
-                      }}
-                    >
-                      {index}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Right Section: Animation Preview */}
-      {imageSrc && (
-        <div className="w-1/4">
-          <h2 className="text-2xl font-bold mb-4">Animation Preview</h2>
-          <div className="relative">
-            <canvas ref={canvasRef} className="border w-full" />
-            <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
-              Frame: {currentPreviewFrame}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
