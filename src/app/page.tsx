@@ -3,6 +3,9 @@ import React, { useState, useEffect, useRef } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import Navbar from './components/Navbar'
+import HelpGuide from './components/HelpGuide';
+import MetadataExporter from './components/MetadataExporter';
+import FileUpload from './components/FileUpload';
 
 export default function Home() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -20,15 +23,6 @@ export default function Home() {
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [showNumbers, setShowNumbers] = useState<boolean>(true);
   const [saveFormat, setSaveFormat] = useState<'individual' | 'spritesheet'>('individual');
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => setImageSrc(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleAnimationInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.target.value;
@@ -221,24 +215,58 @@ export default function Home() {
   }, [imageSrc, columns, rows, animationFrames, animationSpeed, antialiasing]);
   
 
+  // Add the help content
+  const slicerHelp = {
+    title: "How to Use Sprite Slicer",
+    sections: [
+      {
+        title: "Basic Usage",
+        content: [
+          "Upload a sprite sheet using the file input",
+          "Set the number of rows and columns to match your sheet",
+          "Adjust the scale to better view small sprites",
+          "Toggle grid and numbers for better visualization"
+        ]
+      },
+      {
+        title: "Animation",
+        content: [
+          "Enter frame numbers (e.g., '0-3' or '0,1,2,3')",
+          "Adjust animation speed with FPS control",
+          "Preview your animation in the right panel",
+          "Toggle antialiasing for different rendering styles"
+        ]
+      },
+      {
+        title: "Saving",
+        content: [
+          "Choose between saving all frames or selected frames",
+          "Select output format (individual frames or spritesheet)",
+          "Set custom filename for the output",
+          "Click Save to download your frames"
+        ]
+      }
+    ]
+  };
+
   return (
     <>
       <Navbar />
+      <HelpGuide content={slicerHelp} />
       <div className="flex flex-row items-start space-x-4 p-6">
         {/* Left Section: Inputs */}
         <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
           <h1 className="text-4xl font-bold">Sprite Animation Viewer</h1>
 
           {/* Upload Input */}
-          <div className="w-full">
-            <label className="block mb-2">Upload Sprite Sheet:</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="p-2 border rounded w-full"
-            />
-          </div>
+          <FileUpload 
+            onImageUpload={(src) => {
+              if (typeof src === 'string') {
+                setImageSrc(src);
+              }
+            }}
+            multiple={false}
+          />
 
           {imageSrc && (
             <>
@@ -380,6 +408,16 @@ export default function Home() {
                   Save {saveAllFrames ? "All" : "Selected"} Frames
                   {!saveAllFrames && ` as ${saveFormat === 'individual' ? 'ZIP' : 'Sprite Sheet'}`}
                 </button>
+                
+                <MetadataExporter
+                  imageSrc={imageSrc}
+                  columns={columns}
+                  rows={rows}
+                  scale={scale}
+                  animationFrames={animationFrames}
+                  animationSpeed={animationSpeed}
+                  outputFilename={outputFilename}
+                />
               </div>
             </>
           )}

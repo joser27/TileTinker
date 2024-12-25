@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import Navbar from '../components/Navbar'
+import HelpGuide from '../components/HelpGuide';
+import MetadataExporter from '../components/MetadataExporter';
+import FilenameInput from '../components/FilenameInput';
 
 interface Cell {
   id: number;
@@ -132,36 +135,7 @@ export default function SpritesheetGenerator() {
     }
   }, [gridSize]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
 
-    const newSprites: Promise<Sprite>[] = Array.from(files).map(file => 
-      new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            const img = new Image();
-            img.src = reader.result;
-            img.onload = () => {
-              resolve({
-                id: crypto.randomUUID(),
-                src: reader.result as string,
-                name: file.name,
-                width: img.width,
-                height: img.height
-              });
-            };
-          }
-        };
-        reader.readAsDataURL(file);
-      })
-    );
-
-    Promise.all(newSprites).then(loadedSprites => {
-      setSprites(prev => [...prev, ...loadedSprites]);
-    });
-  };
 
   const handleCellClick = (cellId: number) => {
     if (selectedCell === null) {
@@ -428,9 +402,69 @@ export default function SpritesheetGenerator() {
       .filter(n => n >= 0 && n < cells.length);
   };
 
+  // Add the help content
+  const generatorHelp = {
+    title: "How to Use Sprite Sheet Generator",
+    sections: [
+      {
+        title: "Basic Usage",
+        content: [
+          "Upload individual sprite images using the file input",
+          "Set grid dimensions (rows and columns) for arrangement",
+          "Click cells to select and swap sprite positions",
+          "Adjust padding to control space between sprites"
+        ]
+      },
+      {
+        title: "Sprite Management",
+        content: [
+          "Select a sprite to view and edit its details",
+          "Adjust X and Y offsets to fine-tune sprite positions",
+          "Delete unwanted sprites from the grid",
+          "Scale the preview for better visibility"
+        ]
+      },
+      {
+        title: "Animation Preview",
+        content: [
+          "Enter frame sequence (e.g., '0-3' or '0,1,2,3')",
+          "Set FPS to control animation speed",
+          "Use Play/Stop to preview the animation",
+          "Save the final spritesheet as PNG"
+        ]
+      }
+    ]
+  };
+
+  // Keep the original file upload handling
+  const handleSpriteUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (!e.target?.result) return;
+        const src = e.target.result as string;
+        const img = new Image();
+        img.onload = () => {
+          setSprites(prev => [...prev, {
+            id: crypto.randomUUID(),
+            src,
+            name: file.name,
+            width: img.width,
+            height: img.height
+          }]);
+        };
+        img.src = src;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   return (
     <>
       <Navbar />
+      <HelpGuide content={generatorHelp} />
       <div className="flex flex-row items-start space-x-4 p-6">
         {/* Left Panel: Controls */}
         <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
@@ -438,13 +472,13 @@ export default function SpritesheetGenerator() {
           
           <div className="space-y-4 bg-slate-800 p-6 rounded-lg w-full">
             <div>
-              <label className="block text-sm font-medium mb-1">Add Sprites:</label>
+              <label className="block mb-2">Add Sprites:</label>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/png, image/jpeg"
+                onChange={handleSpriteUpload}
                 multiple
-                onChange={handleFileUpload}
-                className="w-full"
+                className="p-2 border rounded w-full"
               />
             </div>
 
@@ -500,15 +534,12 @@ export default function SpritesheetGenerator() {
             </div>
 
             {/* Output Filename */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium mb-1">Output Filename:</label>
+            <div className="space-y-2 bg-slate-800 p-6 rounded-lg w-full">
+              <label className="block text-sm font-medium mb-1">Output Options:</label>
               <div className="space-y-2">
-                <input
-                  type="text"
+                <FilenameInput
                   value={outputFilename}
-                  onChange={(e) => setOutputFilename(e.target.value)}
-                  className="w-full p-2 border rounded text-black"
-                  placeholder="spritesheet"
+                  onChange={setOutputFilename}
                 />
                 <button
                   onClick={handleSave}
@@ -521,6 +552,19 @@ export default function SpritesheetGenerator() {
                 >
                   Save PNG
                 </button>
+                
+                {/* Add MetadataExporter here */}
+                {sprites.length > 0 && (
+                  <MetadataExporter
+                    imageSrc={canvasRef.current?.toDataURL() || null}
+                    columns={gridSize.cols}
+                    rows={gridSize.rows}
+                    scale={previewScale}
+                    animationFrames={animationCells}
+                    animationSpeed={fps}
+                    outputFilename={outputFilename}
+                  />
+                )}
               </div>
             </div>
 

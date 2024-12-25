@@ -3,6 +3,9 @@ import React, { useState, useRef, useEffect } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import Navbar from '../components/Navbar'
+import HelpGuide from '../components/HelpGuide';
+import FileUpload from '../components/FileUpload';
+import FilenameInput from '../components/FilenameInput';
 
 interface Frame {
   x: number;
@@ -34,18 +37,6 @@ export default function AutoDetect() {
   const [mergingMode, setMergingMode] = useState<boolean>(false);
   const [framesToMerge, setFramesToMerge] = useState<number[]>([]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (!e.target) return;
-        setImageSrc(e.target.result as string);
-        detectFrames(e.target.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const isPixelBackground = (imageData: ImageData, x: number, y: number, bgColor: number[]): boolean => {
     const index = (y * imageData.width + x) * 4;
@@ -530,23 +521,58 @@ export default function AutoDetect() {
     };
   };
 
+  // Add the help content
+  const autoDetectHelp = {
+    title: "How to Use Auto Frame Detection",
+    sections: [
+      {
+        title: "Basic Usage",
+        content: [
+          "Upload a sprite sheet to automatically detect frames",
+          "Toggle background removal if needed",
+          "View detected frames outlined on your sprite sheet",
+          "Preview animation using the detected frames"
+        ]
+      },
+      {
+        title: "Frame Management",
+        content: [
+          "Click 'Start Merge' to combine multiple frames",
+          "Select frames you want to merge, then click 'Merge Frames'",
+          "Select a frame and click 'Split Frame' to attempt re-detection",
+          "Adjust frame offsets by selecting individual frames"
+        ]
+      },
+      {
+        title: "Animation & Export",
+        content: [
+          "Enter frame sequence (e.g., '0-3' or '0,1,2,3')",
+          "Adjust animation speed with FPS control",
+          "Choose to save all frames or selected frames",
+          "Export as individual frames (ZIP) or combined spritesheet"
+        ]
+      }
+    ]
+  };
+
   return (
     <>
       <Navbar />
+      <HelpGuide content={autoDetectHelp} />
       <div className="flex flex-row items-start space-x-4 p-6">
         {/* Left Section: Inputs */}
         <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
           <h1 className="text-4xl font-bold">Auto Frame Detection</h1>
 
-          <div className="w-full">
-            <label className="block mb-2">Upload Sprite Sheet:</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="p-2 border rounded w-full"
-            />
-          </div>
+          <FileUpload 
+            onImageUpload={(src) => {
+              if (typeof src === 'string') {
+                setImageSrc(src);
+                detectFrames(src);
+              }
+            }}
+            multiple={false}
+          />
 
           {imageSrc && (
             <>
@@ -668,15 +694,15 @@ export default function AutoDetect() {
                   </div>
                 )}
 
-                <div className="mt-4">
-                  <label className="block mb-2">Output Filename:</label>
-                  <input
-                    type="text"
-                    value={outputFilename}
-                    onChange={(e) => setOutputFilename(e.target.value)}
-                    placeholder="auto_detected_frames"
-                    className="p-2 border rounded w-full text-black"
-                  />
+                <div className="space-y-2 bg-slate-800 p-6 rounded-lg w-full">
+                  <label className="block text-sm font-medium mb-1">Export Options:</label>
+                  <div className="space-y-2">
+                    <FilenameInput
+                      value={outputFilename}
+                      onChange={setOutputFilename}
+                    />
+                    {/* Other export controls */}
+                  </div>
                 </div>
 
                 {!saveAllFrames && (
