@@ -31,6 +31,8 @@ export default function AutoDetect() {
   const [removeBackground, setRemoveBackground] = useState<boolean>(false);
   const [backgroundColor, setBackgroundColor] = useState<string | null>(null);
   const [processedImageSrc, setProcessedImageSrc] = useState<string | null>(null);
+  const [mergingMode, setMergingMode] = useState<boolean>(false);
+  const [framesToMerge, setFramesToMerge] = useState<number[]>([]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -385,6 +387,149 @@ export default function AutoDetect() {
     }
   }, [removeBackground]);
 
+  const handleFrameMerge = () => {
+    if (framesToMerge.length < 2) return;
+    
+    // Calculate the new bounding box that encompasses all selected frames
+    const selectedFrames = framesToMerge.map(index => detectedFrames[index]);
+    const minX = Math.min(...selectedFrames.map(frame => frame.x));
+    const minY = Math.min(...selectedFrames.map(frame => frame.y));
+    const maxX = Math.max(...selectedFrames.map(frame => frame.x + frame.width));
+    const maxY = Math.max(...selectedFrames.map(frame => frame.y + frame.height));
+
+    // Create new merged frame
+    const mergedFrame: Frame = {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+      offsetX: 0,
+      offsetY: 0
+    };
+
+    // Create new frames array without the merged frames
+    const newFrames = detectedFrames.filter((_, index) => !framesToMerge.includes(index));
+    
+    // Insert the merged frame at the position of the first selected frame
+    const firstFrameIndex = Math.min(...framesToMerge);
+    newFrames.splice(firstFrameIndex, 0, mergedFrame);
+
+    // Update state
+    setDetectedFrames(newFrames);
+    setFramesToMerge([]);
+    setMergingMode(false);
+  };
+
+  const handleFrameSplit = () => {
+    if (selectedFrame === null) return;
+    
+    const frameToSplit = detectedFrames[selectedFrame];
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx || !processedImageSrc) return;
+
+    const image = new Image();
+    image.src = processedImageSrc;
+
+    image.onload = () => {
+      // Create a canvas with just the selected frame
+      canvas.width = frameToSplit.width;
+      canvas.height = frameToSplit.height;
+      ctx.drawImage(
+        image,
+        frameToSplit.x,
+        frameToSplit.y,
+        frameToSplit.width,
+        frameToSplit.height,
+        0,
+        0,
+        frameToSplit.width,
+        frameToSplit.height
+      );
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const newFrames: Frame[] = [];
+
+      // Logic to detect rows and columns with content
+      const rowRanges: { start: number; end: number }[] = [];
+      let startY = 0;
+      let inSprite = false;
+
+      // Detect rows
+      for (let y = 0; y < canvas.height; y++) {
+        const isEmpty = isEmptyRow(imageData, y, removeBackground ? [
+          imageData.data[0],
+          imageData.data[1],
+          imageData.data[2]
+        ] : undefined);
+
+        if (!isEmpty && !inSprite) {
+          startY = y;
+          inSprite = true;
+        } else if (isEmpty && inSprite) {
+          rowRanges.push({ start: startY, end: y });
+          inSprite = false;
+        }
+      }
+
+      if (inSprite) {
+        rowRanges.push({ start: startY, end: canvas.height });
+      }
+
+      // Detect sprites within each row
+      rowRanges.forEach((rowRange) => {
+        let startX = 0;
+        inSprite = false;
+
+        for (let x = 0; x < canvas.width; x++) {
+          let isEmpty = true;
+
+          for (let y = rowRange.start; y < rowRange.end; y++) {
+            const index = (y * canvas.width + x) * 4;
+            if (imageData.data[index + 3] > 0) {
+              isEmpty = false;
+              break;
+            }
+          }
+
+          if (!isEmpty && !inSprite) {
+            startX = x;
+            inSprite = true;
+          } else if (isEmpty && inSprite) {
+            newFrames.push({
+              x: frameToSplit.x + startX,
+              y: frameToSplit.y + rowRange.start,
+              width: x - startX,
+              height: rowRange.end - rowRange.start,
+              offsetX: 0,
+              offsetY: 0
+            });
+            inSprite = false;
+          }
+        }
+
+        if (inSprite) {
+          newFrames.push({
+            x: frameToSplit.x + startX,
+            y: frameToSplit.y + rowRange.start,
+            width: canvas.width - startX,
+            height: rowRange.end - rowRange.start,
+            offsetX: 0,
+            offsetY: 0
+          });
+        }
+      });
+
+      if (newFrames.length > 0) {
+        // Replace the original frame with the new detected frames
+        const updatedFrames = [...detectedFrames];
+        updatedFrames.splice(selectedFrame, 1, ...newFrames);
+        setDetectedFrames(updatedFrames);
+        setSelectedFrame(null);
+      }
+    };
+  };
+
   return (
     <>
       <Navbar />
@@ -548,6 +693,47 @@ export default function AutoDetect() {
                   {!saveAllFrames && ` as ${saveFormat === 'individual' ? 'ZIP' : 'Sprite Sheet'}`}
                 </button>
               </div>
+
+              <div className="flex items-center space-x-2 mt-4">
+                <label>Frame Merging:</label>
+                <button
+                  onClick={() => {
+                    setMergingMode(!mergingMode);
+                    setFramesToMerge([]);
+                  }}
+                  className={`px-3 py-1 rounded ${
+                    mergingMode ? 'bg-blue-500' : 'bg-gray-500'
+                  } text-white`}
+                >
+                  {mergingMode ? 'Cancel Merge' : 'Start Merge'}
+                </button>
+                {mergingMode && (
+                  <>
+                    <button
+                      onClick={handleFrameMerge}
+                      disabled={framesToMerge.length < 2}
+                      className={`px-3 py-1 rounded ${
+                        framesToMerge.length < 2 ? 'bg-gray-500' : 'bg-green-500'
+                      } text-white`}
+                    >
+                      Merge {framesToMerge.length} Frames
+                    </button>
+                    <span className="text-sm text-gray-400">
+                      Selected: {framesToMerge.join(', ')}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              <button
+                onClick={handleFrameSplit}
+                disabled={selectedFrame === null}
+                className={`px-3 py-1 rounded ${
+                  selectedFrame === null ? 'bg-gray-500' : 'bg-purple-500 hover:bg-purple-600'
+                } text-white`}
+              >
+                Split Frame
+              </button>
             </>
           )}
         </div>
@@ -574,14 +760,30 @@ export default function AutoDetect() {
                     <div
                       key={index}
                       className={`absolute border border-dashed cursor-pointer pointer-events-auto
-                        ${selectedFrame === index ? 'border-blue-500 border-2' : 'border-red-500'}`}
+                        ${mergingMode 
+                          ? framesToMerge.includes(index)
+                            ? 'border-green-500 border-2'
+                            : 'border-gray-500'
+                          : selectedFrame === index 
+                            ? 'border-blue-500 border-2' 
+                            : 'border-red-500'}`}
                       style={{
                         left: `${frame.x * scaleX}px`,
                         top: `${frame.y * scaleY}px`,
                         width: `${frame.width * scaleX}px`,
                         height: `${frame.height * scaleY}px`,
                       }}
-                      onClick={() => setSelectedFrame(index)}
+                      onClick={() => {
+                        if (mergingMode) {
+                          setFramesToMerge(prev => 
+                            prev.includes(index)
+                              ? prev.filter(f => f !== index)
+                              : [...prev, index]
+                          );
+                        } else {
+                          setSelectedFrame(index);
+                        }
+                      }}
                     >
                       <span
                         className="absolute top-0 left-1/2 -translate-x-1/2 bg-white bg-opacity-75 px-1 text-xs text-red-600 font-bold"
