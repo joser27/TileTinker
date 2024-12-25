@@ -32,12 +32,11 @@ export default function AutoDetect() {
   const [saveFormat, setSaveFormat] = useState<'individual' | 'spritesheet'>('individual');
   const debounceTimeout = useRef<NodeJS.Timeout>();
   const [removeBackground, setRemoveBackground] = useState<boolean>(false);
-  const [backgroundColor, setBackgroundColor] = useState<string | null>(null);
   const [processedImageSrc, setProcessedImageSrc] = useState<string | null>(null);
   const [mergingMode, setMergingMode] = useState<boolean>(false);
   const [framesToMerge, setFramesToMerge] = useState<number[]>([]);
   const [useManualColor, setUseManualColor] = useState<boolean>(false);
-  const [manualColor, setManualColor] = useState<string>('#000000');
+  const [manualColors, setManualColors] = useState<string[]>(['#000000']);
 
 
   const isPixelBackground = (imageData: ImageData, x: number, y: number, bgColor: number[]): boolean => {
@@ -79,35 +78,36 @@ export default function AutoDetect() {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const frames: Frame[] = [];
 
-      // Get background color
-      let bgColor;
+      // Get background colors
+      let bgColors: number[][] = [];
       if (removeBackground) {
         if (useManualColor) {
-          // Convert hex to RGB
-          const r = parseInt(manualColor.slice(1,3), 16);
-          const g = parseInt(manualColor.slice(3,5), 16);
-          const b = parseInt(manualColor.slice(5,7), 16);
-          bgColor = [r, g, b];
+          // Convert all hex colors to RGB
+          bgColors = manualColors.map(color => {
+            const r = parseInt(color.slice(1,3), 16);
+            const g = parseInt(color.slice(3,5), 16);
+            const b = parseInt(color.slice(5,7), 16);
+            return [r, g, b];
+          });
         } else {
-          bgColor = [
+          bgColors = [[
             imageData.data[0],
             imageData.data[1],
             imageData.data[2]
-          ];
+          ]];
         }
       }
 
-      // Store the background color for later use
-      setBackgroundColor(bgColor ? `rgb(${bgColor[0]}, ${bgColor[1]}, ${bgColor[2]})` : null);
-
       // Process the entire image if background removal is enabled
-      if (removeBackground && bgColor) {
+      if (removeBackground && bgColors.length > 0) {
         for (let i = 0; i < imageData.data.length; i += 4) {
-          if (
+          const isBackground = bgColors.some(bgColor => 
             Math.abs(imageData.data[i] - bgColor[0]) <= 5 &&
             Math.abs(imageData.data[i + 1] - bgColor[1]) <= 5 &&
             Math.abs(imageData.data[i + 2] - bgColor[2]) <= 5
-          ) {
+          );
+          
+          if (isBackground) {
             imageData.data[i + 3] = 0; // Set alpha to 0
           }
         }
@@ -123,7 +123,7 @@ export default function AutoDetect() {
       let inSprite = false;
 
       for (let y = 0; y < img.height; y++) {
-        const isEmpty = isEmptyRow(imageData, y, bgColor);
+        const isEmpty = isEmptyRow(imageData, y, bgColors.length > 0 ? bgColors[0] : undefined);
 
         if (!isEmpty && !inSprite) {
           startY = y;
@@ -661,29 +661,48 @@ export default function AutoDetect() {
                         </button>
                       </div>
 
-                      {useManualColor ? (
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="color"
-                            value={manualColor}
-                            onChange={(e) => {
-                              setManualColor(e.target.value);
-                              // Automatically reprocess when color changes
-                              if (imageSrc) detectFrames(imageSrc);
-                            }}
-                            className="w-10 h-10 rounded cursor-pointer"
-                          />
-                          <span className="text-sm">{manualColor}</span>
+                      {useManualColor && (
+                        <div className="space-y-4">
+                          <div className="flex flex-wrap gap-2">
+                            {manualColors.map((color, index) => (
+                              <div key={index} className="flex items-center gap-2">
+                                <input
+                                  type="color"
+                                  value={color}
+                                  onChange={(e) => {
+                                    const newColors = [...manualColors];
+                                    newColors[index] = e.target.value;
+                                    setManualColors(newColors);
+                                    if (imageSrc) detectFrames(imageSrc);
+                                  }}
+                                  className="w-10 h-10 rounded cursor-pointer"
+                                />
+                                {manualColors.length > 1 && (
+                                  <button
+                                    onClick={() => {
+                                      const newColors = manualColors.filter((_, i) => i !== index);
+                                      setManualColors(newColors);
+                                      if (imageSrc) detectFrames(imageSrc);
+                                    }}
+                                    className="p-1 text-red-500 hover:text-red-600"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            <button
+                              onClick={() => setManualColors([...manualColors, '#000000'])}
+                              className="w-10 h-10 rounded border-2 border-dashed border-gray-500 hover:border-gray-400 flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            Select multiple colors to remove different background colors
+                          </div>
                         </div>
-                      ) : backgroundColor ? (
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-10 h-10 rounded border"
-                            style={{ backgroundColor: backgroundColor }}
-                          />
-                          <span className="text-sm">Auto-detected: {backgroundColor}</span>
-                        </div>
-                      ) : null}
+                      )}
                     </div>
                   )}
                 </div>
