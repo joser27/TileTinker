@@ -37,6 +37,7 @@ export default function SpritesheetGenerator() {
   const [frameSequenceInput, setFrameSequenceInput] = useState('');
   const preloadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const [currentPreviewFrame, setCurrentPreviewFrame] = useState<number>(0);
+  const [previewScale, setPreviewScale] = useState<number>(1);
 
   // Calculate optimal cell size based on sprites
   const calculateOptimalCellSize = (sprites: Sprite[]) => {
@@ -185,8 +186,10 @@ export default function SpritesheetGenerator() {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Adjust coordinates for scale
+    const x = (e.clientX - rect.left) / previewScale;
+    const y = (e.clientY - rect.top) / previewScale;
+    
     const col = Math.floor(x / cellSize);
     const row = Math.floor(y / cellSize);
     
@@ -525,6 +528,21 @@ export default function SpritesheetGenerator() {
             <div className="space-y-2">
               <h3 className="font-medium">Display Options</h3>
               <div className="flex flex-col gap-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Preview Scale:</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="4"
+                      step="0.5"
+                      value={previewScale}
+                      onChange={(e) => setPreviewScale(Number(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm w-12">{previewScale}x</span>
+                  </div>
+                </div>
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -701,11 +719,19 @@ export default function SpritesheetGenerator() {
 
         {/* Middle Section: Canvas */}
         <div className="w-1/2">
-          <canvas
-            ref={canvasRef}
-            onClick={handleCanvasClick}
-            className="border border-gray-700"
-          />
+          <div 
+            className="transform-gpu"
+            style={{ 
+              transform: `scale(${previewScale})`,
+              transformOrigin: 'top left'
+            }}
+          >
+            <canvas
+              ref={canvasRef}
+              onClick={handleCanvasClick}
+              className="border border-gray-700"
+            />
+          </div>
         </div>
 
         {/* Right Section: Animation Preview */}
