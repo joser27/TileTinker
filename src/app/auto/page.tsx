@@ -36,6 +36,8 @@ export default function AutoDetect() {
   const [processedImageSrc, setProcessedImageSrc] = useState<string | null>(null);
   const [mergingMode, setMergingMode] = useState<boolean>(false);
   const [framesToMerge, setFramesToMerge] = useState<number[]>([]);
+  const [useManualColor, setUseManualColor] = useState<boolean>(false);
+  const [manualColor, setManualColor] = useState<string>('#000000');
 
 
   const isPixelBackground = (imageData: ImageData, x: number, y: number, bgColor: number[]): boolean => {
@@ -77,12 +79,23 @@ export default function AutoDetect() {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const frames: Frame[] = [];
 
-      // Get background color from top-left pixel
-      const bgColor = removeBackground ? [
-        imageData.data[0],
-        imageData.data[1],
-        imageData.data[2]
-      ] : undefined;
+      // Get background color
+      let bgColor;
+      if (removeBackground) {
+        if (useManualColor) {
+          // Convert hex to RGB
+          const r = parseInt(manualColor.slice(1,3), 16);
+          const g = parseInt(manualColor.slice(3,5), 16);
+          const b = parseInt(manualColor.slice(5,7), 16);
+          bgColor = [r, g, b];
+        } else {
+          bgColor = [
+            imageData.data[0],
+            imageData.data[1],
+            imageData.data[2]
+          ];
+        }
+      }
 
       // Store the background color for later use
       setBackgroundColor(bgColor ? `rgb(${bgColor[0]}, ${bgColor[1]}, ${bgColor[2]})` : null);
@@ -607,159 +620,209 @@ export default function AutoDetect() {
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
-                <label>Remove Background:</label>
-                <input
-                  type="checkbox"
-                  checked={removeBackground}
-                  onChange={(e) => setRemoveBackground(e.target.checked)}
-                  className="form-checkbox h-5 w-5 text-blue-600"
-                />
-              </div>
-              {backgroundColor && removeBackground && (
-                <div className="text-sm">
-                  Detected background color: 
-                  <div 
-                    className="inline-block w-4 h-4 ml-2 border"
-                    style={{ backgroundColor: backgroundColor }}
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <div className="flex flex-col gap-4 p-4 border rounded bg-slate-800">
+                  <label className="text-sm font-medium">Background Removal Options:</label>
+                  
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={removeBackground}
+                      onChange={(e) => {
+                        setRemoveBackground(e.target.checked);
+                        // Automatically detect frames when toggling background removal
+                        if (imageSrc) detectFrames(imageSrc);
+                      }}
+                      className="rounded"
+                    />
+                    <span>Remove Background</span>
+                  </div>
 
-              {selectedFrame !== null && (
-                <div className="w-full p-4 border rounded">
-                  <h3 className="text-xl font-bold mb-2">Adjust Frame {selectedFrame}</h3>
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <label className="mr-2">X offset:</label>
-                      <input
-                        type="number"
-                        value={detectedFrames[selectedFrame].offsetX}
-                        onChange={(e) => {
-                          const newFrames = [...detectedFrames];
-                          newFrames[selectedFrame] = {
-                            ...newFrames[selectedFrame],
-                            offsetX: parseInt(e.target.value) || 0
-                          };
-                          setDetectedFrames(newFrames);
-                        }}
-                        className="p-1 border rounded w-20 text-black"
-                      />
+                  {removeBackground && (
+                    <div className="space-y-4 pl-4 border-l-2 border-slate-700">
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => {
+                            setUseManualColor(false);
+                            if (imageSrc) detectFrames(imageSrc);
+                          }}
+                          className={`px-3 py-2 rounded ${!useManualColor ? 'bg-blue-500' : 'bg-slate-600'}`}
+                        >
+                          Auto Detect
+                        </button>
+                        <button
+                          onClick={() => {
+                            setUseManualColor(true);
+                            if (imageSrc) detectFrames(imageSrc);
+                          }}
+                          className={`px-3 py-2 rounded ${useManualColor ? 'bg-blue-500' : 'bg-slate-600'}`}
+                        >
+                          Manual Color
+                        </button>
+                      </div>
+
+                      {useManualColor ? (
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="color"
+                            value={manualColor}
+                            onChange={(e) => {
+                              setManualColor(e.target.value);
+                              // Automatically reprocess when color changes
+                              if (imageSrc) detectFrames(imageSrc);
+                            }}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <span className="text-sm">{manualColor}</span>
+                        </div>
+                      ) : backgroundColor ? (
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-10 h-10 rounded border"
+                            style={{ backgroundColor: backgroundColor }}
+                          />
+                          <span className="text-sm">Auto-detected: {backgroundColor}</span>
+                        </div>
+                      ) : null}
                     </div>
-                    <div>
-                      <label className="mr-2">Y offset:</label>
-                      <input
-                        type="number"
-                        value={detectedFrames[selectedFrame].offsetY}
-                        onChange={(e) => {
-                          const newFrames = [...detectedFrames];
-                          newFrames[selectedFrame] = {
-                            ...newFrames[selectedFrame],
-                            offsetY: parseInt(e.target.value) || 0
-                          };
-                          setDetectedFrames(newFrames);
-                        }}
-                        className="p-1 border rounded w-20 text-black"
-                      />
+                  )}
+                </div>
+
+                {selectedFrame !== null && (
+                  <div className="w-full p-4 border rounded">
+                    <h3 className="text-xl font-bold mb-2">Adjust Frame {selectedFrame}</h3>
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <label className="mr-2">X offset:</label>
+                        <input
+                          type="number"
+                          value={detectedFrames[selectedFrame].offsetX}
+                          onChange={(e) => {
+                            const newFrames = [...detectedFrames];
+                            newFrames[selectedFrame] = {
+                              ...newFrames[selectedFrame],
+                              offsetX: parseInt(e.target.value) || 0
+                            };
+                            setDetectedFrames(newFrames);
+                          }}
+                          className="p-1 border rounded w-20 text-black"
+                        />
+                      </div>
+                      <div>
+                        <label className="mr-2">Y offset:</label>
+                        <input
+                          type="number"
+                          value={detectedFrames[selectedFrame].offsetY}
+                          onChange={(e) => {
+                            const newFrames = [...detectedFrames];
+                            newFrames[selectedFrame] = {
+                              ...newFrames[selectedFrame],
+                              offsetY: parseInt(e.target.value) || 0
+                            };
+                            setDetectedFrames(newFrames);
+                          }}
+                          className="p-1 border rounded w-20 text-black"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="w-full pt-4 border-t">
-                <div className="w-full">
-                  <label className="block mb-2">Save Mode:</label>
-                  <select 
-                    value={saveAllFrames ? "all" : "selected"}
-                    onChange={(e) => setSaveAllFrames(e.target.value === "all")}
-                    className="p-2 border rounded text-black w-full"
-                  >
-                    <option value="all">All Frames</option>
-                    <option value="selected">Selected Frames Only</option>
-                  </select>
-                </div>
-
-                {/* Only show format selection for selected frames */}
-                {!saveAllFrames && (
-                  <div className="w-full mt-4">
-                    <label className="block mb-2">Save Format:</label>
+                <div className="w-full pt-4 border-t">
+                  <div className="w-full">
+                    <label className="block mb-2">Save Mode:</label>
                     <select 
-                      value={saveFormat}
-                      onChange={(e) => setSaveFormat(e.target.value as 'individual' | 'spritesheet')}
+                      value={saveAllFrames ? "all" : "selected"}
+                      onChange={(e) => setSaveAllFrames(e.target.value === "all")}
                       className="p-2 border rounded text-black w-full"
                     >
-                      <option value="individual">Individual Frames (ZIP)</option>
-                      <option value="spritesheet">Combined Sprite Sheet</option>
+                      <option value="all">All Frames</option>
+                      <option value="selected">Selected Frames Only</option>
                     </select>
                   </div>
-                )}
 
-                <div className="space-y-2 bg-slate-800 p-6 rounded-lg w-full">
-                  <label className="block text-sm font-medium mb-1">Export Options:</label>
-                  <div className="space-y-2">
-                    <FilenameInput
-                      value={outputFilename}
-                      onChange={setOutputFilename}
-                    />
-                    {/* Other export controls */}
+                  {/* Only show format selection for selected frames */}
+                  {!saveAllFrames && (
+                    <div className="w-full mt-4">
+                      <label className="block mb-2">Save Format:</label>
+                      <select 
+                        value={saveFormat}
+                        onChange={(e) => setSaveFormat(e.target.value as 'individual' | 'spritesheet')}
+                        className="p-2 border rounded text-black w-full"
+                      >
+                        <option value="individual">Individual Frames (ZIP)</option>
+                        <option value="spritesheet">Combined Sprite Sheet</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 bg-slate-800 p-6 rounded-lg w-full">
+                    <label className="block text-sm font-medium mb-1">Export Options:</label>
+                    <div className="space-y-2">
+                      <FilenameInput
+                        value={outputFilename}
+                        onChange={setOutputFilename}
+                      />
+                      {/* Other export controls */}
+                    </div>
                   </div>
+
+                  {!saveAllFrames && (
+                    <div className="text-sm text-gray-600 mt-2">
+                      Use the &quot;Animation Frames&quot; input above to specify which frames to save
+                    </div>
+                  )}
+
+                  <button
+                    onClick={saveSpriteSheet}
+                    className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
+                  >
+                    Save {saveAllFrames ? "All" : "Selected"} Frames
+                    {!saveAllFrames && ` as ${saveFormat === 'individual' ? 'ZIP' : 'Sprite Sheet'}`}
+                  </button>
                 </div>
 
-                {!saveAllFrames && (
-                  <div className="text-sm text-gray-600 mt-2">
-                    Use the &quot;Animation Frames&quot; input above to specify which frames to save
-                  </div>
-                )}
+                <div className="flex items-center space-x-2 mt-4">
+                  <label>Frame Merging:</label>
+                  <button
+                    onClick={() => {
+                      setMergingMode(!mergingMode);
+                      setFramesToMerge([]);
+                    }}
+                    className={`px-3 py-1 rounded ${
+                      mergingMode ? 'bg-blue-500' : 'bg-gray-500'
+                    } text-white`}
+                  >
+                    {mergingMode ? 'Cancel Merge' : 'Start Merge'}
+                  </button>
+                  {mergingMode && (
+                    <>
+                      <button
+                        onClick={handleFrameMerge}
+                        disabled={framesToMerge.length < 2}
+                        className={`px-3 py-1 rounded ${
+                          framesToMerge.length < 2 ? 'bg-gray-500' : 'bg-green-500'
+                        } text-white`}
+                      >
+                        Merge {framesToMerge.length} Frames
+                      </button>
+                      <span className="text-sm text-gray-400">
+                        Selected: {framesToMerge.join(', ')}
+                      </span>
+                    </>
+                  )}
+                </div>
 
                 <button
-                  onClick={saveSpriteSheet}
-                  className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
-                >
-                  Save {saveAllFrames ? "All" : "Selected"} Frames
-                  {!saveAllFrames && ` as ${saveFormat === 'individual' ? 'ZIP' : 'Sprite Sheet'}`}
-                </button>
-              </div>
-
-              <div className="flex items-center space-x-2 mt-4">
-                <label>Frame Merging:</label>
-                <button
-                  onClick={() => {
-                    setMergingMode(!mergingMode);
-                    setFramesToMerge([]);
-                  }}
+                  onClick={handleFrameSplit}
+                  disabled={selectedFrame === null}
                   className={`px-3 py-1 rounded ${
-                    mergingMode ? 'bg-blue-500' : 'bg-gray-500'
+                    selectedFrame === null ? 'bg-gray-500' : 'bg-purple-500 hover:bg-purple-600'
                   } text-white`}
                 >
-                  {mergingMode ? 'Cancel Merge' : 'Start Merge'}
+                  Split Frame
                 </button>
-                {mergingMode && (
-                  <>
-                    <button
-                      onClick={handleFrameMerge}
-                      disabled={framesToMerge.length < 2}
-                      className={`px-3 py-1 rounded ${
-                        framesToMerge.length < 2 ? 'bg-gray-500' : 'bg-green-500'
-                      } text-white`}
-                    >
-                      Merge {framesToMerge.length} Frames
-                    </button>
-                    <span className="text-sm text-gray-400">
-                      Selected: {framesToMerge.join(', ')}
-                    </span>
-                  </>
-                )}
               </div>
-
-              <button
-                onClick={handleFrameSplit}
-                disabled={selectedFrame === null}
-                className={`px-3 py-1 rounded ${
-                  selectedFrame === null ? 'bg-gray-500' : 'bg-purple-500 hover:bg-purple-600'
-                } text-white`}
-              >
-                Split Frame
-              </button>
             </>
           )}
         </div>
