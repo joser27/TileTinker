@@ -37,6 +37,7 @@ export default function AutoDetect() {
   const [framesToMerge, setFramesToMerge] = useState<number[]>([]);
   const [useManualColor, setUseManualColor] = useState<boolean>(false);
   const [manualColors, setManualColors] = useState<string[]>(['#000000']);
+  const [scale, setScale] = useState<number>(1);
 
 
   const isPixelBackground = (imageData: ImageData, x: number, y: number, bgColor: number[]): boolean => {
@@ -840,6 +841,16 @@ export default function AutoDetect() {
                 >
                   Split Frame
                 </button>
+
+                <div>
+                  <label>Scale Preview (0.5x, 2x, etc.):</label>
+                  <input
+                    type="number"
+                    value={scale}
+                    onChange={(e) => setScale(Number(e.target.value))}
+                    className="p-2 border rounded w-20 text-black"
+                  />
+                </div>
               </div>
             </>
           )}
@@ -847,12 +858,18 @@ export default function AutoDetect() {
 
         {/* Middle Section: Sprite Sheet Preview */}
         {processedImageSrc && (
-          <div className="w-1/2">
-            <div className="relative">
+          <div 
+            className="relative w-1/2 overflow-hidden"
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+            }}
+          >
+            <div className="relative w-full">
               <img
                 src={processedImageSrc}
                 alt="Uploaded Sprite Sheet"
-                className="w-full h-auto"
+                className="w-full h-auto block"
                 ref={imageRef}
               />
               <div className="absolute top-0 left-0 w-full h-full pointer-events-none">

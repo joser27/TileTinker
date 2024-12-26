@@ -426,7 +426,7 @@ export default function Home() {
         {/* Middle Section: Image Grid Preview */}
         {imageSrc && (
           <div
-            className="relative w-1/2 bg-gray-200 overflow-hidden"
+            className="relative w-1/2 overflow-hidden"
             style={{
               transform: `scale(${scale})`, // Apply scaling
               transformOrigin: "top left", // Ensure scaling starts from top-left corner
