@@ -182,7 +182,6 @@ export default function AutoDetect() {
       });
 
       setDetectedFrames(frames);
-      setAnimationFrames(frames.map((_, index) => index)); // Default to all frames
     };
   };
 
