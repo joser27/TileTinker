@@ -444,6 +444,8 @@ export default function SpritesheetGenerator() {
       {
         title: "Sprite Management",
         content: [
+          "Click a cell before uploading to place sprites at specific locations",
+          "When uploading multiple sprites with a cell selected, they'll be placed in consecutive cells",
           "Select a sprite to view and edit its details",
           "Adjust X and Y offsets to fine-tune sprite positions",
           "Delete unwanted sprites from the grid",
@@ -462,24 +464,43 @@ export default function SpritesheetGenerator() {
     ]
   };
 
-  // Keep the original file upload handling
+  // Update handleSpriteUpload to consider selected cell
   const handleSpriteUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     
-    files.forEach(file => {
+    files.forEach((file, fileIndex) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         if (!e.target?.result) return;
         const src = e.target.result as string;
         const img = new Image();
         img.onload = () => {
-          setSprites(prev => [...prev, {
+          const newSprite = {
             id: crypto.randomUUID(),
             src,
             name: file.name,
             width: img.width,
             height: img.height
-          }]);
+          };
+          
+          setSprites(prev => [...prev, newSprite]);
+          
+          // If a cell is selected, place the sprite there and subsequent sprites in following cells
+          if (selectedCell !== null) {
+            const targetCell = selectedCell + fileIndex;
+            // Only place if the target cell is within grid bounds
+            if (targetCell < gridSize.rows * gridSize.cols) {
+              setCells(prev => prev.map((cell, index) => 
+                index === targetCell
+                  ? { ...cell, spriteId: newSprite.id }
+                  : cell
+              ));
+            }
+            // Only clear selection after processing the last file
+            if (fileIndex === files.length - 1) {
+              setSelectedCell(null);
+            }
+          }
         };
         img.src = src;
       };
