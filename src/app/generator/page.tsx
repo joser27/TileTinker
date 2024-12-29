@@ -20,6 +20,31 @@ interface Sprite {
   offsetY?: number;
 }
 
+interface CollapsibleSectionProps {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children, defaultOpen = true }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border border-slate-700 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-3 bg-slate-700 text-left flex justify-between items-center hover:bg-slate-600"
+      >
+        <span className="font-medium">{title}</span>
+        <span className="transform transition-transform">
+          {isOpen ? '▼' : '▶'}
+        </span>
+      </button>
+      {isOpen && <div className="p-4">{children}</div>}
+    </div>
+  );
+};
+
 export default function SpritesheetGenerator() {
   const [sprites, setSprites] = useState<Sprite[]>([]);
   const [cells, setCells] = useState<Cell[]>([]);
@@ -41,6 +66,7 @@ export default function SpritesheetGenerator() {
   const preloadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const [currentPreviewFrame, setCurrentPreviewFrame] = useState<number>(0);
   const [previewScale, setPreviewScale] = useState<number>(1);
+  const [showAnimationPreview, setShowAnimationPreview] = useState(true);
 
   // Calculate optimal cell size based on sprites
   const calculateOptimalCellSize = (sprites: Sprite[]) => {
@@ -470,77 +496,80 @@ export default function SpritesheetGenerator() {
         <div className="flex flex-col items-start space-y-4 w-1/4 min-w-[300px]">
           <h1 className="text-2xl font-bold">Sprite Sheet Generator</h1>
           
-          <div className="space-y-4 bg-slate-800 p-6 rounded-lg w-full">
-            <div>
-              <label className="block mb-2">Add Sprites:</label>
-              <input
-                type="file"
-                accept="image/png, image/jpeg"
-                onChange={handleSpriteUpload}
-                multiple
-                className="p-2 border rounded w-full"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4 w-full">
+            <CollapsibleSection title="Sprite Upload">
               <div>
-                <label className="block text-sm font-medium mb-1">Rows:</label>
+                <label className="block mb-2">Add Sprites:</label>
                 <input
-                  type="number"
-                  value={gridSize.rows}
-                  onChange={(e) => {
-                    const newRows = Math.max(1, parseInt(e.target.value));
-                    updateGrid(newRows, gridSize.cols);
-                  }}
-                  className="w-full p-2 border rounded text-black"
-                  min="1"
+                  type="file"
+                  accept="image/png, image/jpeg"
+                  onChange={handleSpriteUpload}
+                  multiple
+                  className="p-2 border rounded w-full"
                 />
               </div>
+            </CollapsibleSection>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Columns:</label>
-                <input
-                  type="number"
-                  value={gridSize.cols}
-                  onChange={(e) => {
-                    const newCols = Math.max(1, parseInt(e.target.value));
-                    updateGrid(gridSize.rows, newCols);
-                  }}
-                  className="w-full p-2 border rounded text-black"
-                  min="1"
-                />
+            <CollapsibleSection title="Grid Settings">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Rows:</label>
+                    <input
+                      type="number"
+                      value={gridSize.rows}
+                      onChange={(e) => {
+                        const newRows = Math.max(1, parseInt(e.target.value));
+                        updateGrid(newRows, gridSize.cols);
+                      }}
+                      className="w-full p-2 border rounded text-black"
+                      min="1"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Columns:</label>
+                    <input
+                      type="number"
+                      value={gridSize.cols}
+                      onChange={(e) => {
+                        const newCols = Math.max(1, parseInt(e.target.value));
+                        updateGrid(gridSize.rows, newCols);
+                      }}
+                      className="w-full p-2 border rounded text-black"
+                      min="1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Sprite Padding:</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="range"
+                      min="0"
+                      max="32"
+                      value={padding}
+                      onChange={(e) => {
+                        const newPadding = parseInt(e.target.value);
+                        setPadding(newPadding);
+                        const optimalSize = calculateOptimalCellSize(sprites);
+                        setCellSize(optimalSize);
+                      }}
+                      className="flex-1"
+                    />
+                    <span className="text-sm w-8">{padding}px</span>
+                  </div>
+                </div>
               </div>
-            </div>
+            </CollapsibleSection>
 
-            {/* Padding Control */}
-            <div>
-              <label className="block text-sm font-medium mb-1">Sprite Padding:</label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="range"
-                  min="0"
-                  max="32"
-                  value={padding}
-                  onChange={(e) => {
-                    const newPadding = parseInt(e.target.value);
-                    setPadding(newPadding);
-                    const optimalSize = calculateOptimalCellSize(sprites);
-                    setCellSize(optimalSize);
-                  }}
-                  className="flex-1"
-                />
-                <span className="text-sm w-8">{padding}px</span>
-              </div>
-            </div>
-
-            {/* Output Filename */}
-            <div className="space-y-2 bg-slate-800 p-6 rounded-lg w-full">
-              <label className="block text-sm font-medium mb-1">Output Options:</label>
-              <div className="space-y-2">
+            <CollapsibleSection title="Output Options">
+              <div className="space-y-4">
                 <FilenameInput
                   value={outputFilename}
                   onChange={setOutputFilename}
                 />
+                
                 <button
                   onClick={handleSave}
                   className={`w-full px-4 py-2 rounded transition-colors ${
@@ -553,7 +582,7 @@ export default function SpritesheetGenerator() {
                   Save PNG
                 </button>
                 
-                {/* Add MetadataExporter here */}
+                {/* Add MetadataExporter only when sprites exist */}
                 {sprites.length > 0 && (
                   <MetadataExporter
                     imageSrc={canvasRef.current?.toDataURL() || null}
@@ -566,199 +595,214 @@ export default function SpritesheetGenerator() {
                   />
                 )}
               </div>
-            </div>
+            </CollapsibleSection>
 
-            {/* Display Options */}
-            <div className="space-y-2">
-              <h3 className="font-medium">Display Options</h3>
-              <div className="flex flex-col gap-2">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Preview Scale (0.5x, 2x, etc.):</label>
+            <CollapsibleSection title="Display Options">
+              <div className="space-y-2">
+                <h3 className="font-medium">Display Options</h3>
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Preview Scale (0.5x, 2x, etc.):</label>
+                    <input
+                      type="number"
+                      value={previewScale}
+                      onChange={(e) => setPreviewScale(Number(e.target.value))}
+                      step="0.1"
+                      min="0.1"
+                      className="p-2 border rounded text-black w-20"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={showGrid}
+                      onChange={(e) => setShowGrid(e.target.checked)}
+                      className="rounded"
+                    />
+                    Show Grid
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={showNumbers}
+                      onChange={(e) => setShowNumbers(e.target.checked)}
+                      className="rounded"
+                    />
+                    Show Cell Numbers
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={antialiasing}
+                      onChange={(e) => setAntialiasing(e.target.checked)}
+                      className="rounded"
+                    />
+                    Enable Antialiasing
+                  </label>
+                </div>
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Animation Settings">
+              <div className="space-y-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={showAnimationPreview}
+                    onChange={(e) => setShowAnimationPreview(e.target.checked)}
+                    className="rounded"
+                  />
+                  Show Preview Panel
+                </label>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium mb-1">Frame Sequence:</label>
+                  <input
+                    type="text"
+                    value={frameSequenceInput}
+                    onChange={(e) => {
+                      const inputValue = e.target.value;
+                      setFrameSequenceInput(inputValue);
+                      const cells = parseCellSequence(inputValue);
+                      setAnimationCells(cells);
+                    }}
+                    placeholder="Enter cells (e.g., 0-3 or 0,1,2,3)"
+                    className="w-full p-2 border rounded text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium mb-1">FPS:</label>
                   <input
                     type="number"
-                    value={previewScale}
-                    onChange={(e) => setPreviewScale(Number(e.target.value))}
-                    step="0.1"
-                    min="0.1"
-                    className="p-2 border rounded text-black w-20"
+                    value={fps}
+                    onChange={(e) => setFps(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full p-2 border rounded text-black"
+                    min="1"
+                    max="60"
                   />
                 </div>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={showGrid}
-                    onChange={(e) => setShowGrid(e.target.checked)}
-                    className="rounded"
-                  />
-                  Show Grid
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={showNumbers}
-                    onChange={(e) => setShowNumbers(e.target.checked)}
-                    className="rounded"
-                  />
-                  Show Cell Numbers
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={antialiasing}
-                    onChange={(e) => setAntialiasing(e.target.checked)}
-                    className="rounded"
-                  />
-                  Enable Antialiasing
-                </label>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className={`flex-1 px-4 py-2 rounded transition-colors ${
+                      animationCells.length === 0 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : isPlaying 
+                          ? 'bg-red-500 hover:bg-red-600' 
+                          : 'bg-green-500 hover:bg-green-600'
+                    }`}
+                    disabled={animationCells.length === 0}
+                  >
+                    {isPlaying ? 'Stop' : 'Play'}
+                  </button>
+                </div>
               </div>
-            </div>
+            </CollapsibleSection>
 
-            {/* Move animation controls here but keep the preview canvas in the right panel */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium mb-1">Frame Sequence:</label>
-              <input
-                type="text"
-                value={frameSequenceInput}
-                onChange={(e) => {
-                  const inputValue = e.target.value;
-                  setFrameSequenceInput(inputValue);
-                  const cells = parseCellSequence(inputValue);
-                  setAnimationCells(cells);
-                }}
-                placeholder="Enter cells (e.g., 0-3 or 0,1,2,3)"
-                className="w-full p-2 border rounded text-black"
-              />
-            </div>
+            {selectedCell !== null && (
+              <CollapsibleSection title="Selected Cell Details">
+                <div className="space-y-2 bg-slate-800 p-6 rounded-lg w-full">
+                  <h2 className="font-semibold">Selected Cell Details</h2>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-sm text-gray-400">Cell Number:</span>
+                      <span className="ml-2">{selectedCell}</span>
+                    </div>
+                    
+                    {getSelectedSprite() ? (
+                      <>
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={getSelectedSprite()?.src}
+                            alt={getSelectedSprite()?.name}
+                            className="w-16 h-16 object-contain bg-slate-700 rounded p-2"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                          <div className="flex-1">
+                            <div className="text-sm font-medium truncate">
+                              {getSelectedSprite()?.name}
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              {getSelectedSprite()?.width}x{getSelectedSprite()?.height}px
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              Position: ({Math.floor(selectedCell % gridSize.cols)}, 
+                              {Math.floor(selectedCell / gridSize.cols)})
+                            </div>
+                          </div>
+                        </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium mb-1">FPS:</label>
-              <input
-                type="number"
-                value={fps}
-                onChange={(e) => setFps(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full p-2 border rounded text-black"
-                min="1"
-                max="60"
-              />
-            </div>
+                        {/* Offset Controls */}
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium">Offset Adjustments</div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-sm text-gray-400">X Offset:</label>
+                              <input
+                                type="number"
+                                value={getSelectedSprite()?.offsetX || 0}
+                                onChange={(e) => {
+                                  const sprite = getSelectedSprite();
+                                  if (sprite) {
+                                    setSprites(prev => prev.map(s => 
+                                      s.id === sprite.id 
+                                        ? { ...s, offsetX: parseInt(e.target.value) || 0 }
+                                        : s
+                                    ));
+                                  }
+                                }}
+                                className="w-full p-2 border rounded text-black"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-gray-400">Y Offset:</label>
+                              <input
+                                type="number"
+                                value={getSelectedSprite()?.offsetY || 0}
+                                onChange={(e) => {
+                                  const sprite = getSelectedSprite();
+                                  if (sprite) {
+                                    setSprites(prev => prev.map(s => 
+                                      s.id === sprite.id 
+                                        ? { ...s, offsetY: parseInt(e.target.value) || 0 }
+                                        : s
+                                    ));
+                                  }
+                                }}
+                                className="w-full p-2 border rounded text-black"
+                              />
+                            </div>
+                          </div>
+                        </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className={`flex-1 px-4 py-2 rounded transition-colors ${
-                  animationCells.length === 0 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : isPlaying 
-                      ? 'bg-red-500 hover:bg-red-600' 
-                      : 'bg-green-500 hover:bg-green-600'
-                }`}
-                disabled={animationCells.length === 0}
-              >
-                {isPlaying ? 'Stop' : 'Play'}
-              </button>
-            </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              const sprite = getSelectedSprite();
+                              if (sprite) {
+                                handleDeleteSprite(sprite.id);
+                              }
+                            }}
+                            className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 rounded transition-colors"
+                          >
+                            Delete Sprite
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-gray-400">Empty Cell</div>
+                    )}
+                  </div>
+                </div>
+              </CollapsibleSection>
+            )}
           </div>
-
-          {/* Selected Cell Details */}
-          {selectedCell !== null && (
-            <div className="space-y-2 bg-slate-800 p-6 rounded-lg w-full">
-              <h2 className="font-semibold">Selected Cell Details</h2>
-              <div className="space-y-4">
-                <div>
-                  <span className="text-sm text-gray-400">Cell Number:</span>
-                  <span className="ml-2">{selectedCell}</span>
-                </div>
-                
-                {getSelectedSprite() ? (
-                  <>
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={getSelectedSprite()?.src}
-                        alt={getSelectedSprite()?.name}
-                        className="w-16 h-16 object-contain bg-slate-700 rounded p-2"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium truncate">
-                          {getSelectedSprite()?.name}
-                        </div>
-                        <div className="text-sm text-gray-400">
-                          {getSelectedSprite()?.width}x{getSelectedSprite()?.height}px
-                        </div>
-                        <div className="text-sm text-gray-400">
-                          Position: ({Math.floor(selectedCell % gridSize.cols)}, 
-                          {Math.floor(selectedCell / gridSize.cols)})
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Offset Controls */}
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">Offset Adjustments</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-sm text-gray-400">X Offset:</label>
-                          <input
-                            type="number"
-                            value={getSelectedSprite()?.offsetX || 0}
-                            onChange={(e) => {
-                              const sprite = getSelectedSprite();
-                              if (sprite) {
-                                setSprites(prev => prev.map(s => 
-                                  s.id === sprite.id 
-                                    ? { ...s, offsetX: parseInt(e.target.value) || 0 }
-                                    : s
-                                ));
-                              }
-                            }}
-                            className="w-full p-2 border rounded text-black"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-gray-400">Y Offset:</label>
-                          <input
-                            type="number"
-                            value={getSelectedSprite()?.offsetY || 0}
-                            onChange={(e) => {
-                              const sprite = getSelectedSprite();
-                              if (sprite) {
-                                setSprites(prev => prev.map(s => 
-                                  s.id === sprite.id 
-                                    ? { ...s, offsetY: parseInt(e.target.value) || 0 }
-                                    : s
-                                ));
-                              }
-                            }}
-                            className="w-full p-2 border rounded text-black"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          const sprite = getSelectedSprite();
-                          if (sprite) {
-                            handleDeleteSprite(sprite.id);
-                          }
-                        }}
-                        className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 rounded transition-colors"
-                      >
-                        Delete Sprite
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-gray-400">Empty Cell</div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Middle Section: Canvas */}
-        <div className="w-1/2">
+        <div className="flex-1">
           <div 
             className="transform-gpu"
             style={{ 
@@ -775,10 +819,9 @@ export default function SpritesheetGenerator() {
         </div>
 
         {/* Right Section: Animation Preview */}
-        <div className="w-1/4">
-          <div className="bg-slate-800 p-6 rounded-lg">
-            <h2 className="text-xl font-bold mb-4">Animation Preview</h2>
-            <div className="relative">
+        {showAnimationPreview && (
+          <div className="w-1/4">
+            <div className="relative border border-slate-700 rounded-lg overflow-hidden bg-slate-800 p-4">
               <canvas
                 ref={previewCanvasRef}
                 className="w-full aspect-square bg-slate-900"
@@ -793,7 +836,7 @@ export default function SpritesheetGenerator() {
               )}
             </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );
