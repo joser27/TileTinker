@@ -65,8 +65,10 @@ export default function SpritesheetGenerator() {
   const [frameSequenceInput, setFrameSequenceInput] = useState('');
   const preloadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const [currentPreviewFrame, setCurrentPreviewFrame] = useState<number>(0);
+  const [spritesheetScale, setSpritesheetScale] = useState<number>(1);
   const [previewScale, setPreviewScale] = useState<number>(1);
   const [showAnimationPreview, setShowAnimationPreview] = useState(true);
+  const [animationPreviewSize, setAnimationPreviewSize] = useState<number>(500);
 
   // Calculate optimal cell size based on sprites
   const calculateOptimalCellSize = (sprites: Sprite[]) => {
@@ -187,8 +189,8 @@ export default function SpritesheetGenerator() {
     if (!rect) return;
     
     // Adjust coordinates for scale
-    const x = (e.clientX - rect.left) / previewScale;
-    const y = (e.clientY - rect.top) / previewScale;
+    const x = (e.clientX - rect.left) / spritesheetScale;
+    const y = (e.clientY - rect.top) / spritesheetScale;
     
     const col = Math.floor(x / cellSize);
     const row = Math.floor(y / cellSize);
@@ -230,11 +232,15 @@ export default function SpritesheetGenerator() {
           ctx.strokeRect(x, y, cellSize, cellSize);
         }
 
-        // Draw cell number if enabled
+        // Draw cell number if enabled - with size limits
         if (showNumbers) {
           ctx.fillStyle = '#666';
-          ctx.font = '12px Arial';
-          ctx.fillText(cellIndex.toString(), x + 4, y + 14);
+          // Clamp font size between 8 and 16 pixels
+          const fontSize = Math.min(Math.max(12 / spritesheetScale, 8), 16);
+          ctx.font = `${fontSize}px Arial`;
+          // Adjust position based on font size
+          const padding = fontSize / 3;
+          ctx.fillText(cellIndex.toString(), x + padding, y + fontSize + padding);
         }
 
         // Draw sprite if present
@@ -272,7 +278,7 @@ export default function SpritesheetGenerator() {
         }
       }
     }
-  }, [gridSize, cellSize, cells, selectedCell, sprites, showGrid, showNumbers, antialiasing, padding]);
+  }, [gridSize, cellSize, cells, selectedCell, sprites, showGrid, showNumbers, antialiasing, padding, spritesheetScale]);
 
   const handleSave = () => {
     const canvas = canvasRef.current;
@@ -620,14 +626,14 @@ export default function SpritesheetGenerator() {
 
             <CollapsibleSection title="Display Options">
               <div className="space-y-2">
-                <h3 className="font-medium">Display Options</h3>
+                <h3 className="font-medium">Spritesheet Preview Options</h3>
                 <div className="flex flex-col gap-2">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Preview Scale (0.5x, 2x, etc.):</label>
+                    <label className="block text-sm font-medium mb-1">Preview Scale:</label>
                     <input
                       type="number"
-                      value={previewScale}
-                      onChange={(e) => setPreviewScale(Number(e.target.value))}
+                      value={spritesheetScale}
+                      onChange={(e) => setSpritesheetScale(Number(e.target.value))}
                       step="0.1"
                       min="0.1"
                       className="p-2 border rounded text-black w-20"
@@ -675,6 +681,21 @@ export default function SpritesheetGenerator() {
                   />
                   Show Preview Panel
                 </label>
+
+                {showAnimationPreview && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium mb-1">Animation Preview Size:</label>
+                    <input
+                      type="number"
+                      value={animationPreviewSize}
+                      onChange={(e) => setAnimationPreviewSize(Math.min(900, Math.max(100, parseInt(e.target.value) || 200)))}
+                      className="w-full p-2 border rounded text-black"
+                      min="100"
+                      max="900"
+                      step="10"
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium mb-1">Frame Sequence:</label>
@@ -823,31 +844,41 @@ export default function SpritesheetGenerator() {
         </div>
 
         {/* Middle Section: Canvas */}
-        <div className="flex-1">
-          <div 
-            className="transform-gpu"
-            style={{ 
-              transform: `scale(${previewScale})`,
-              transformOrigin: 'top left'
+        <div 
+          className="flex-1"
+          style={{ 
+            transform: `scale(${spritesheetScale})`,
+            transformOrigin: 'top left'
+          }}
+        >
+          <canvas
+            ref={canvasRef}
+            onClick={handleCanvasClick}
+            className="border border-gray-700"
+            style={{
+              imageRendering: antialiasing ? 'auto' : 'pixelated'
             }}
-          >
-            <canvas
-              ref={canvasRef}
-              onClick={handleCanvasClick}
-              className="border border-gray-700"
-            />
-          </div>
+          />
         </div>
 
         {/* Right Section: Animation Preview */}
         {showAnimationPreview && (
-          <div className="w-1/4">
-            <div className="relative border border-slate-700 rounded-lg overflow-hidden bg-slate-800 p-4">
+          <div className="absolute top-6 right-6">
+            <div 
+              className="relative border border-slate-700 rounded-lg overflow-hidden bg-slate-800 p-4"
+              style={{
+                width: 'fit-content'
+              }}
+            >
               <canvas
                 ref={previewCanvasRef}
-                className="w-full aspect-square bg-slate-900"
+                width={cellSize}
+                height={cellSize}
+                className="bg-slate-900 block"
                 style={{ 
                   imageRendering: antialiasing ? 'auto' : 'pixelated',
+                  width: `${animationPreviewSize}px`,
+                  height: `${animationPreviewSize}px`
                 }}
               />
               {isPlaying && (

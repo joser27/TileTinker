@@ -22,6 +22,7 @@ export default function Home() {
   const debounceTimeout = useRef<NodeJS.Timeout>();
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [showNumbers, setShowNumbers] = useState<boolean>(true);
+  const [showRowCol, setShowRowCol] = useState<boolean>(false);
   const [saveFormat, setSaveFormat] = useState<'individual' | 'spritesheet'>('individual');
 
   const handleAnimationInput = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -334,6 +335,16 @@ export default function Home() {
                 />
               </div>
 
+              <div className="flex items-center space-x-2">
+                <label>Show Row/Col:</label>
+                <input
+                  type="checkbox"
+                  checked={showRowCol}
+                  onChange={(e) => setShowRowCol(e.target.checked)}
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
+              </div>
+
               {/* Animation Settings */}
               <div>
                 <label>Animation Frames (comma-separated):</label>
@@ -487,7 +498,16 @@ export default function Home() {
                           transform: "translate(-50%, 2px)",
                         }}
                       >
-                        {tileIndex}
+                        <div className="text-center">
+                          {showRowCol ? (
+                            <>
+                              <div>#{tileIndex}</div>
+                              <div className="text-[10px]">R{rowIndex} C{colIndex}</div>
+                            </>
+                          ) : (
+                            tileIndex
+                          )}
+                        </div>
                       </div>
                     );
                   })
