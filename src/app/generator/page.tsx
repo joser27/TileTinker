@@ -66,7 +66,7 @@ export default function SpritesheetGenerator() {
   const preloadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const [currentPreviewFrame, setCurrentPreviewFrame] = useState<number>(0);
   const [spritesheetScale, setSpritesheetScale] = useState<number>(1);
-  const [previewScale, setPreviewScale] = useState<number>(1);
+
   const [showAnimationPreview, setShowAnimationPreview] = useState(true);
   const [animationPreviewSize, setAnimationPreviewSize] = useState<number>(500);
 
@@ -615,7 +615,7 @@ export default function SpritesheetGenerator() {
                     imageSrc={canvasRef.current?.toDataURL() || null}
                     columns={gridSize.cols}
                     rows={gridSize.rows}
-                    scale={previewScale}
+                    scale={spritesheetScale}
                     animationFrames={animationCells}
                     animationSpeed={fps}
                     outputFilename={outputFilename}
