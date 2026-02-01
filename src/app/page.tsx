@@ -484,30 +484,64 @@ export default function Home() {
                   />
                 ))}
 
-                {/* Tile Numbers */}
-                {showNumbers && Array.from({ length: rows }).map((_, rowIndex) =>
+                {/* Tile Numbers and/or Row/Col Labels */}
+                {(showNumbers || showRowCol) && Array.from({ length: rows }).map((_, rowIndex) =>
                   Array.from({ length: columns }).map((_, colIndex) => {
                     const tileIndex = rowIndex * columns + colIndex;
+                    // Calculate dynamic font size based on cell dimensions
+                    const cellWidthPercent = 100 / columns;
+                    const cellHeightPercent = 100 / rows;
+                    // Effective size accounts for zoom - zooming in makes cells "effectively larger"
+                    const effectiveWidth = cellWidthPercent * scale;
+                    const effectiveHeight = cellHeightPercent * scale;
+                    // Base size scales with effective cell size
+                    const baseFontSize = Math.min(effectiveWidth, effectiveHeight);
+                    // Clamp font size, then divide by scale so visual size stays consistent
+                    const fontSize = Math.max(0.25, Math.min(baseFontSize * 0.2, 1.2)) / scale;
+                    // Show dots when effective cell size is too small (zoom in to reveal numbers)
+                    const isTooSmall = effectiveWidth < 5 || effectiveHeight < 5;
+                    
+                    // Build tooltip text based on what's enabled
+                    const tooltipText = [
+                      showNumbers ? `#${tileIndex}` : '',
+                      showRowCol ? `R${rowIndex} C${colIndex}` : ''
+                    ].filter(Boolean).join(' ');
+                    
                     return (
                       <div
                         key={`tile-${tileIndex}`}
-                        className="absolute text-xs font-bold text-red-600 bg-white bg-opacity-75 rounded px-1"
+                        className="absolute font-bold text-red-600 bg-white bg-opacity-75 rounded cursor-default group"
                         style={{
                           top: `${rowIndex / rows * 100}%`,
                           left: `${(colIndex + 0.5) / columns * 100}%`,
                           transform: "translate(-50%, 2px)",
+                          fontSize: isTooSmall ? '0' : `${fontSize}rem`,
+                          padding: isTooSmall ? '2px' : `${Math.max(1, fontSize * 2)}px ${Math.max(2, fontSize * 3)}px`,
+                          minWidth: isTooSmall ? '4px' : 'auto',
+                          minHeight: isTooSmall ? '4px' : 'auto',
                         }}
+                        title={tooltipText}
                       >
-                        <div className="text-center">
-                          {showRowCol ? (
-                            <>
-                              <div>#{tileIndex}</div>
-                              <div className="text-[10px]">R{rowIndex} C{colIndex}</div>
-                            </>
-                          ) : (
-                            tileIndex
-                          )}
-                        </div>
+                        {!isTooSmall && (
+                          <div className="text-center whitespace-nowrap">
+                            {showNumbers && showRowCol ? (
+                              <>
+                                <div>#{tileIndex}</div>
+                                <div style={{ fontSize: `${fontSize * 0.7}rem` }}>R{rowIndex} C{colIndex}</div>
+                              </>
+                            ) : showNumbers ? (
+                              tileIndex
+                            ) : (
+                              <div>R{rowIndex} C{colIndex}</div>
+                            )}
+                          </div>
+                        )}
+                        {/* Tooltip for small cells */}
+                        {isTooSmall && (
+                          <div className="absolute hidden group-hover:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-50 -top-8 left-1/2 -translate-x-1/2">
+                            {tooltipText}
+                          </div>
+                        )}
                       </div>
                     );
                   })
