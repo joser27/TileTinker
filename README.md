@@ -5,6 +5,13 @@ TileTinker is a web-based toolkit for game developers and pixel artists to work 
 ### **Live Demo**
 🎮 Try it now: [TileTinker Live Demo](https://joser27.github.io/TileTinker/)
 
+## **What's New**
+
+- **Smart label display** — Numbers and row/col labels scale with zoom to prevent overlap on dense grids
+- **Independent options** — Show Numbers and Show Row/Col work separately; use either or both
+- **Performance mode** — Very dense grids (many columns/rows) show dots instead of text; zoom in to reveal full labels
+- **Hover tooltips** — Hover over any cell (including dots) for instant tile index and row/col info
+
 ## **Browser Compatibility**
 
 TileTinker is tested and optimized for:
@@ -72,8 +79,14 @@ Known limitations:
 - **Interactive Grid**:
   - Adjustable preview scale
   - Toggle grid lines
-  - Toggle cell numbers
+  - Toggle cell numbers (independent from row/col labels)
+  - Toggle row/col labels (R0 C0, R1 C1, etc.) — works independently from numbers
   - Antialiasing toggle
+- **Smart Label Display**:
+  - Labels scale dynamically with zoom — no overlapping text on dense grids
+  - On very dense grids (many columns/rows), labels become small dots for performance
+  - Zoom in to reveal full numbers and row/col labels
+  - Hover over dots for instant tooltips with tile info
 - **Animation Preview**:
   - Test frame sequences
   - Adjustable animation speed

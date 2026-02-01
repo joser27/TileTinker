@@ -225,8 +225,16 @@ export default function Home() {
         content: [
           "Upload a sprite sheet using the file input",
           "Set the number of rows and columns to match your sheet",
-          "Adjust the scale to better view small sprites",
-          "Toggle grid and numbers for better visualization"
+          "Toggle grid, numbers, and row/col labels — each works independently"
+        ]
+      },
+      {
+        title: "Scale & Labels",
+        content: [
+          "Scale Preview zooms the grid — use it to view small sprites or dense sheets",
+          "Labels shrink on dense grids to avoid overlap; zoom in to reveal full numbers",
+          "On very dense grids, labels become dots for performance — hover for tooltips",
+          "Zoom in enough and dots automatically turn into readable numbers"
         ]
       },
       {
